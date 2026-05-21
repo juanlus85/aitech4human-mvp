@@ -32,7 +32,7 @@ export default function Home() {
             {/* Editorial bracket decoration */}
             <div className="bracket-corner inline-block px-4 py-2 mb-6">
               <Badge variant="secondary" className="text-xs font-sans tracking-widest uppercase">
-                Research Group
+                Ulysseus Research & Innovation Group
               </Badge>
             </div>
 
