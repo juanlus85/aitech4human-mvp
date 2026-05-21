@@ -82,3 +82,9 @@
 - [x] Fix CV PDF upload silently failing on Plesk — replaced base64-over-tRPC with multipart FormData REST endpoint /api/upload/cv (multer)
 - [x] Added loading spinner on photo button and "Uploading..." state on CV button
 - [x] Added explicit onError toast so any future upload error is visible to the user
+
+## Round 4: Local Storage Fallback
+
+- [x] Replace Manus-only S3 storage with dual-mode adapter: uses local filesystem (uploads/ folder) when BUILT_IN_FORGE_API_URL/KEY are absent, Manus S3 when present
+- [x] Register /uploads static route in Express to serve locally uploaded files
+- [x] Ensure uploads/ directory is created automatically on server start
