@@ -435,37 +435,44 @@ const congressesRouter = router({
       return { ...congress, proposals: proposalsWithInterests };
     }),
 
-  create: protectedProcedure
+    create: protectedProcedure
     .input(z.object({
       name: z.string().min(1),
+      acronym: z.string().optional(),
       description: z.string().optional(),
       topic: z.string().optional(),
       startDate: z.coerce.date().optional(),
       endDate: z.coerce.date().optional(),
       location: z.string().optional(),
-      modality: z.enum(["in-person", "online", "hybrid"]),
-      registrationFee: z.string().optional(),
-      websiteUrl: z.string().optional(),
-      cfpUrl: z.string().optional(),
-      abstractDeadline: z.coerce.date().optional(),
-      additionalInfo: z.string().optional(),
-    }))
-    .mutation(({ input, ctx }) => createCongress({ ...input, creatorId: ctx.user.id })),
-
-  update: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      description: z.string().optional(),
-      topic: z.string().optional(),
-      startDate: z.coerce.date().optional(),
-      endDate: z.coerce.date().optional(),
-      location: z.string().optional(),
+      country: z.string().optional(),
       modality: z.enum(["in-person", "online", "hybrid"]).optional(),
       registrationFee: z.string().optional(),
       websiteUrl: z.string().optional(),
       cfpUrl: z.string().optional(),
       abstractDeadline: z.coerce.date().optional(),
+      paperDeadline: z.coerce.date().optional(),
+      registrationDeadline: z.coerce.date().optional(),
+      additionalInfo: z.string().optional(),
+    }))
+    .mutation(({ input, ctx }) => createCongress({ ...input, creatorId: ctx.user.id })),
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      acronym: z.string().optional(),
+      description: z.string().optional(),
+      topic: z.string().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
+      location: z.string().optional(),
+      country: z.string().optional(),
+      modality: z.enum(["in-person", "online", "hybrid"]).optional(),
+      registrationFee: z.string().optional(),
+      websiteUrl: z.string().optional(),
+      cfpUrl: z.string().optional(),
+      abstractDeadline: z.coerce.date().optional(),
+      paperDeadline: z.coerce.date().optional(),
+      registrationDeadline: z.coerce.date().optional(),
       additionalInfo: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {

@@ -17,11 +17,12 @@ const MODALITIES = ["in-person", "online", "hybrid"] as const;
 const MODALITY_LABELS: Record<string, string> = { "in-person": "In Person", "online": "Online", "hybrid": "Hybrid" };
 
 const emptyForm = {
-  name: "", description: "", topic: "",
+  name: "", acronym: "", description: "", topic: "",
   startDateStr: "", endDateStr: "",
-  location: "", modality: "in-person" as typeof MODALITIES[number],
+  location: "", country: "", modality: "in-person" as typeof MODALITIES[number],
   registrationFee: "", websiteUrl: "", cfpUrl: "",
-  abstractDeadlineStr: "", additionalInfo: "",
+  abstractDeadlineStr: "", paperDeadlineStr: "", registrationDeadlineStr: "",
+  additionalInfo: "",
 };
 
 export default function Congresses() {
@@ -78,16 +79,20 @@ export default function Congresses() {
   const handleCreate = () => {
     createMutation.mutate({
       name: form.name,
+      acronym: form.acronym || undefined,
       description: form.description || undefined,
       topic: form.topic || undefined,
       startDate: form.startDateStr ? new Date(form.startDateStr) : undefined,
       endDate: form.endDateStr ? new Date(form.endDateStr) : undefined,
       location: form.location || undefined,
+      country: form.country || undefined,
       modality: form.modality,
       registrationFee: form.registrationFee || undefined,
       websiteUrl: form.websiteUrl || undefined,
       cfpUrl: form.cfpUrl || undefined,
       abstractDeadline: form.abstractDeadlineStr ? new Date(form.abstractDeadlineStr) : undefined,
+      paperDeadline: form.paperDeadlineStr ? new Date(form.paperDeadlineStr) : undefined,
+      registrationDeadline: form.registrationDeadlineStr ? new Date(form.registrationDeadlineStr) : undefined,
       additionalInfo: form.additionalInfo || undefined,
     });
   };
@@ -118,7 +123,7 @@ export default function Congresses() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <Badge variant="outline" className="text-xs">{MODALITY_LABELS[c.modality] ?? c.modality}</Badge>
+                      <Badge variant="outline" className="text-xs">{MODALITY_LABELS[c.modality ?? ""] ?? c.modality}</Badge>
                       {c.topic && <Badge variant="secondary" className="text-xs">{c.topic}</Badge>}
                     </div>
                     <h3 className="font-serif font-semibold text-foreground line-clamp-2">{c.name}</h3>
@@ -151,16 +156,22 @@ export default function Congresses() {
         <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setForm(emptyForm); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="font-serif">Add Congress</DialogTitle></DialogHeader>
-            <div className="space-y-4 mt-2">
-              <div className="space-y-1.5">
-                <Label>Congress Name *</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </div>
+              <div className="space-y-4 mt-2">
               <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Congress Name *</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Acronym</Label>
+                  <Input value={form.acronym} onChange={(e) => setForm({ ...form, acronym: e.target.value })} placeholder="e.g. ICML 2026" />
+                </div>
                 <div className="space-y-1.5">
                   <Label>Topic / Area</Label>
                   <Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="AI, HCI, Education..." />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Modality</Label>
                   <Select value={form.modality} onValueChange={(v: any) => setForm({ ...form, modality: v })}>
@@ -183,12 +194,24 @@ export default function Congresses() {
                   <Input type="date" value={form.abstractDeadlineStr} onChange={(e) => setForm({ ...form, abstractDeadlineStr: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
+                  <Label>Paper Deadline</Label>
+                  <Input type="date" value={form.paperDeadlineStr} onChange={(e) => setForm({ ...form, paperDeadlineStr: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Registration Deadline</Label>
+                  <Input type="date" value={form.registrationDeadlineStr} onChange={(e) => setForm({ ...form, registrationDeadlineStr: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
                   <Label>Registration Fee</Label>
                   <Input value={form.registrationFee} onChange={(e) => setForm({ ...form, registrationFee: e.target.value })} placeholder="e.g. €450" />
                 </div>
-                <div className="space-y-1.5 col-span-2">
+                <div className="space-y-1.5">
                   <Label>Location</Label>
-                  <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City, Country" />
+                  <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Country</Label>
+                  <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Spain" />
                 </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label>Website URL</Label>
@@ -233,7 +256,7 @@ export default function Congresses() {
 
                 <div className="space-y-5 mt-2">
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{MODALITY_LABELS[detail.modality] ?? detail.modality}</Badge>
+                    <Badge variant="outline">{MODALITY_LABELS[detail.modality ?? ""] ?? detail.modality}</Badge>
                     {detail.topic && <Badge variant="secondary">{detail.topic}</Badge>}
                   </div>
 
