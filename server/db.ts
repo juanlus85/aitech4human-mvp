@@ -12,6 +12,16 @@ import {
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+
+/**
+ * Convert all undefined values to null so mysql2 doesn't produce
+ * a param-count mismatch when optional fields are not provided.
+ */
+function sanitize<T extends Record<string, unknown>>(data: T): T {
+  return Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k, v === undefined ? null : v])
+  ) as T;
+}
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -74,7 +84,7 @@ export async function upsertProfile(userId: number, data: Partial<typeof profile
   if (existing.length > 0) {
     await db.update(profiles).set(data).where(eq(profiles.userId, userId));
   } else {
-    await db.insert(profiles).values({ userId, ...data });
+    await db.insert(profiles).values(sanitize({ userId, ...data }));
   }
 }
 
@@ -135,7 +145,7 @@ export async function getNewsById(id: number) {
 export async function createNews(data: typeof news.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(news).values(data);
+  await db.insert(news).values(sanitize(data));
   const r = await db.select().from(news).where(eq(news.slug, data.slug)).limit(1);
   return r[0] ?? null;
 }
@@ -225,7 +235,7 @@ export async function getMessageById(id: number) {
 export async function createMessage(data: typeof messages.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(messages).values(data);
+  await db.insert(messages).values(sanitize(data));
   const r = await db.select().from(messages).orderBy(desc(messages.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -245,7 +255,7 @@ export async function getAttachmentsForMessage(messageId: number) {
 export async function createMessageAttachment(data: typeof messageAttachments.$inferInsert) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(messageAttachments).values(data);
+  await db.insert(messageAttachments).values(sanitize(data));
 }
 
 // ─── Meetings ─────────────────────────────────────────────────────────────────
@@ -266,7 +276,7 @@ export async function getMeetingById(id: number) {
 export async function createMeeting(data: typeof meetings.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(meetings).values(data);
+  await db.insert(meetings).values(sanitize(data));
   const r = await db.select().from(meetings).orderBy(desc(meetings.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -349,7 +359,7 @@ export async function getCongressById(id: number) {
 export async function createCongress(data: typeof congresses.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(congresses).values(data);
+  await db.insert(congresses).values(sanitize(data));
   const r = await db.select().from(congresses).orderBy(desc(congresses.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -375,7 +385,7 @@ export async function getCommProposalsForCongress(congressId: number) {
 export async function createCommProposal(data: typeof commProposals.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(commProposals).values(data);
+  await db.insert(commProposals).values(sanitize(data));
   const r = await db.select().from(commProposals).orderBy(desc(commProposals.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -416,7 +426,7 @@ export async function getPaperById(id: number) {
 export async function createPaper(data: typeof papers.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(papers).values(data);
+  await db.insert(papers).values(sanitize(data));
   const r = await db.select().from(papers).orderBy(desc(papers.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -469,7 +479,7 @@ export async function getEventById(id: number) {
 export async function createEvent(data: typeof events.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(events).values(data);
+  await db.insert(events).values(sanitize(data));
   const r = await db.select().from(events).orderBy(desc(events.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -535,7 +545,7 @@ export async function getDocumentById(id: number) {
 export async function createDocument(data: typeof documents.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(documents).values(data);
+  await db.insert(documents).values(sanitize(data));
   const r = await db.select().from(documents).orderBy(desc(documents.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -555,7 +565,7 @@ export async function getAllFolders() {
 export async function createFolder(data: typeof documentFolders.$inferInsert) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(documentFolders).values(data);
+  await db.insert(documentFolders).values(sanitize(data));
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -596,7 +606,7 @@ export async function getTaskById(id: number) {
 export async function createTask(data: typeof tasks.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(tasks).values(data);
+  await db.insert(tasks).values(sanitize(data));
   const r = await db.select().from(tasks).orderBy(desc(tasks.createdAt)).limit(1);
   return r[0] ?? null;
 }
@@ -624,7 +634,7 @@ export async function getNotificationsForUser(userId: number) {
 export async function createNotification(data: typeof notifications.$inferInsert) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(notifications).values(data);
+  await db.insert(notifications).values(sanitize(data));
 }
 
 export async function markNotificationRead(id: number) {
