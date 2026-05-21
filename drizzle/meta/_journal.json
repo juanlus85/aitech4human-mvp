@@ -15,6 +15,13 @@
       "when": 1779382463884,
       "tag": "0001_crazy_speedball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1779404414359,
+      "tag": "0002_good_maria_hill",
+      "breakpoints": true
     }
   ]
 }
