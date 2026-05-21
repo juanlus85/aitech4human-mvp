@@ -88,3 +88,7 @@
 - [x] Replace Manus-only S3 storage with dual-mode adapter: uses local filesystem (uploads/ folder) when BUILT_IN_FORGE_API_URL/KEY are absent, Manus S3 when present
 - [x] Register /uploads static route in Express to serve locally uploaded files
 - [x] Ensure uploads/ directory is created automatically on server start
+
+## Round 5: MySQL Date Fix
+
+- [x] Fix Meetings/Congresses/Papers/Events insert failures on production MySQL — root cause was drizzle passing Date objects with milliseconds (2026-05-23 12:12:00.000) which MySQL rejects; fixed by initializing mysql2 pool with timezone:'+00:00' and dateStrings:false
