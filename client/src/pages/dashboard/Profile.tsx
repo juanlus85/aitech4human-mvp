@@ -1,0 +1,266 @@
+import DashboardLayout from "@/components/DashboardLayout";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { useEffect, useRef, useState } from "react";
+import { Camera, FileText, Save, Upload } from "lucide-react";
+
+export default function Profile() {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const { data: profile, isLoading } = trpc.profiles.getMyProfile.useQuery();
+
+  const [form, setForm] = useState({
+    bio: "", interests: "", university: "", department: "",
+    researchArea: "", orcid: "", googleScholar: "", researchGate: "",
+    scopus: "", webOfScience: "", linkedin: "", personalWeb: "",
+    keywords: "", languages: "", availableToCollaborate: false, isPublic: true,
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        bio: profile.bio ?? "",
+        interests: profile.interests ?? "",
+        university: profile.university ?? "",
+        department: profile.department ?? "",
+        researchArea: profile.researchArea ?? "",
+        orcid: profile.orcid ?? "",
+        googleScholar: profile.googleScholar ?? "",
+        researchGate: profile.researchGate ?? "",
+        scopus: profile.scopus ?? "",
+        webOfScience: profile.webOfScience ?? "",
+        linkedin: profile.linkedin ?? "",
+        personalWeb: profile.personalWeb ?? "",
+        keywords: profile.keywords ?? "",
+        languages: profile.languages ?? "",
+        availableToCollaborate: profile.availableToCollaborate ?? false,
+        isPublic: profile.isPublic ?? true,
+      });
+    }
+  }, [profile]);
+
+  const updateMutation = trpc.profiles.update.useMutation({
+    onSuccess: () => {
+      utils.profiles.getMyProfile.invalidate();
+      toast.success("Profile updated successfully.");
+    },
+    onError: () => toast.error("Failed to update profile."),
+  });
+
+  const photoMutation = trpc.profiles.uploadPhoto.useMutation({
+    onSuccess: () => {
+      utils.profiles.getMyProfile.invalidate();
+      toast.success("Photo updated.");
+    },
+  });
+
+  const cvMutation = trpc.profiles.uploadCv.useMutation({
+    onSuccess: () => {
+      utils.profiles.getMyProfile.invalidate();
+      toast.success("CV uploaded.");
+    },
+  });
+
+  const photoRef = useRef<HTMLInputElement>(null);
+  const cvRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      photoMutation.mutate({ base64, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      cvMutation.mutate({ base64, fileName: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateMutation.mutate(form);
+  };
+
+  const field = (id: keyof typeof form, label: string, placeholder?: string) => (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={form[id] as string}
+        onChange={(e) => setForm({ ...form, [id]: e.target.value })}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-3xl space-y-6">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold text-foreground">My Profile</h1>
+          <p className="text-sm text-muted-foreground mt-1">Your profile is visible on the public members page.</p>
+        </div>
+
+        {/* Photo */}
+        <div className="glass-card rounded-xl p-6 flex items-center gap-5">
+          <div className="relative">
+            <Avatar className="w-20 h-20">
+              {profile?.photoUrl && <AvatarImage src={profile.photoUrl} />}
+              <AvatarFallback className="text-2xl font-serif font-semibold bg-primary/10 text-primary">
+                {user?.name?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => photoRef.current?.click()}
+              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+            <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">{user?.name}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <p className="text-xs text-muted-foreground capitalize mt-0.5">{user?.role}</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Academic info */}
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Academic Information</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {field("university", "University", "University of...")}
+              {field("department", "Department", "Department of...")}
+              {field("researchArea", "Research Area", "e.g. Artificial Intelligence")}
+              {field("languages", "Languages", "e.g. English, Spanish")}
+            </div>
+          </div>
+
+          {/* Bio & Interests */}
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Biography & Interests</h2>
+            <div className="space-y-1.5">
+              <Label htmlFor="bio">Biography</Label>
+              <Textarea
+                id="bio"
+                value={form.bio}
+                onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                placeholder="Write a short academic biography..."
+                rows={4}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="interests">Research Interests</Label>
+              <Textarea
+                id="interests"
+                value={form.interests}
+                onChange={(e) => setForm({ ...form, interests: e.target.value })}
+                placeholder="Describe your research interests..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="keywords">Keywords <span className="text-muted-foreground text-xs">(comma-separated)</span></Label>
+              <Input
+                id="keywords"
+                value={form.keywords}
+                onChange={(e) => setForm({ ...form, keywords: e.target.value })}
+                placeholder="AI, XR, eye-tracking, education..."
+              />
+            </div>
+          </div>
+
+          {/* Academic profiles */}
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Academic & Social Profiles</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {field("orcid", "ORCID", "0000-0000-0000-0000")}
+              {field("googleScholar", "Google Scholar URL")}
+              {field("researchGate", "ResearchGate URL")}
+              {field("scopus", "Scopus URL")}
+              {field("webOfScience", "Web of Science URL")}
+              {field("linkedin", "LinkedIn URL")}
+              {field("personalWeb", "Personal Website URL")}
+            </div>
+          </div>
+
+          {/* CV */}
+          <div className="glass-card rounded-xl p-6 space-y-3">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Curriculum Vitae</h2>
+            <div className="flex items-center gap-3">
+              {profile?.cvPdfUrl ? (
+                <a href={profile.cvPdfUrl} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="gap-2 bg-white/60">
+                    <FileText className="w-4 h-4" /> View current CV
+                  </Button>
+                </a>
+              ) : (
+                <p className="text-sm text-muted-foreground">No CV uploaded yet.</p>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-white/60"
+                onClick={() => cvRef.current?.click()}
+                disabled={cvMutation.isPending}
+              >
+                <Upload className="w-4 h-4" />
+                {cvMutation.isPending ? "Uploading..." : "Upload PDF"}
+              </Button>
+              <input ref={cvRef} type="file" accept="application/pdf" className="hidden" onChange={handleCvChange} />
+            </div>
+          </div>
+
+          {/* Visibility */}
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Visibility Settings</h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Public profile</p>
+                <p className="text-xs text-muted-foreground">Show your profile on the public members page</p>
+              </div>
+              <Switch
+                checked={form.isPublic}
+                onCheckedChange={(v) => setForm({ ...form, isPublic: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Open to collaborate</p>
+                <p className="text-xs text-muted-foreground">Display a collaboration badge on your profile</p>
+              </div>
+              <Switch
+                checked={form.availableToCollaborate}
+                onCheckedChange={(v) => setForm({ ...form, availableToCollaborate: v })}
+              />
+            </div>
+          </div>
+
+          <Button type="submit" className="font-medium gap-2" disabled={updateMutation.isPending}>
+            <Save className="w-4 h-4" />
+            {updateMutation.isPending ? "Saving..." : "Save Profile"}
+          </Button>
+        </form>
+      </div>
+    </DashboardLayout>
+  );
+}

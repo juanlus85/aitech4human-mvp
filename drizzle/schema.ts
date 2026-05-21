@@ -1,28 +1,327 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  boolean,
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  bigint,
+} from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
+// ─── Users & Auth ────────────────────────────────────────────────────────────
+
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: mysqlEnum("role", ["admin", "member"]).default("member").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn"),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// ─── Member Profiles ──────────────────────────────────────────────────────────
+
+export const profiles = mysqlTable("profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  photoUrl: text("photoUrl"),
+  photoKey: text("photoKey"),
+  bio: text("bio"),
+  interests: text("interests"),
+  university: varchar("university", { length: 255 }),
+  department: varchar("department", { length: 255 }),
+  researchArea: varchar("researchArea", { length: 255 }),
+  orcid: varchar("orcid", { length: 64 }),
+  googleScholar: varchar("googleScholar", { length: 512 }),
+  researchGate: varchar("researchGate", { length: 512 }),
+  scopus: varchar("scopus", { length: 512 }),
+  webOfScience: varchar("webOfScience", { length: 512 }),
+  linkedin: varchar("linkedin", { length: 512 }),
+  personalWeb: varchar("personalWeb", { length: 512 }),
+  cvPdfUrl: text("cvPdfUrl"),
+  cvPdfKey: text("cvPdfKey"),
+  keywords: text("keywords"),
+  languages: text("languages"),
+  availableToCollaborate: boolean("availableToCollaborate").default(true),
+  isPublic: boolean("isPublic").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Profile = typeof profiles.$inferSelect;
+export type InsertProfile = typeof profiles.$inferInsert;
+
+// ─── News ─────────────────────────────────────────────────────────────────────
+
+export const news = mysqlTable("news", {
+  id: int("id").autoincrement().primaryKey(),
+  authorId: int("authorId").notNull().references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  slug: varchar("slug", { length: 512 }).notNull().unique(),
+  summary: text("summary"),
+  content: text("content").notNull(),
+  coverImageUrl: text("coverImageUrl"),
+  coverImageKey: text("coverImageKey"),
+  isPublished: boolean("isPublished").default(false).notNull(),
+  publishedAt: timestamp("publishedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type News = typeof news.$inferSelect;
+export type InsertNews = typeof news.$inferInsert;
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+export const messages = mysqlTable("messages", {
+  id: int("id").autoincrement().primaryKey(),
+  senderId: int("senderId").notNull().references(() => users.id),
+  recipientId: int("recipientId").notNull().references(() => users.id),
+  parentId: int("parentId"),
+  subject: varchar("subject", { length: 512 }).notNull(),
+  body: text("body").notNull(),
+  isReadByRecipient: boolean("isReadByRecipient").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;
+
+export const messageAttachments = mysqlTable("messageAttachments", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: int("messageId").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  fileName: varchar("fileName", { length: 512 }).notNull(),
+  fileKey: text("fileKey").notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileSize: bigint("fileSize", { mode: "number" }),
+  mimeType: varchar("mimeType", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MessageAttachment = typeof messageAttachments.$inferSelect;
+
+// ─── Meetings ─────────────────────────────────────────────────────────────────
+
+export const meetings = mysqlTable("meetings", {
+  id: int("id").autoincrement().primaryKey(),
+  organizerId: int("organizerId").notNull().references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  description: text("description"),
+  modality: mysqlEnum("modality", ["online", "in-person", "hybrid"]).notNull(),
+  location: text("location"),
+  meetingLink: text("meetingLink"),
+  agenda: text("agenda"),
+  type: mysqlEnum("type", ["fixed", "poll"]).default("fixed").notNull(),
+  fixedDate: timestamp("fixedDate"),
+  pollDeadline: timestamp("pollDeadline"),
+  finalDate: timestamp("finalDate"),
+  status: mysqlEnum("status", ["scheduled", "cancelled", "completed"]).default("scheduled").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Meeting = typeof meetings.$inferSelect;
+export type InsertMeeting = typeof meetings.$inferInsert;
+
+export const meetingAttendance = mysqlTable("meetingAttendance", {
+  id: int("id").autoincrement().primaryKey(),
+  meetingId: int("meetingId").notNull().references(() => meetings.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  response: mysqlEnum("response", ["attending", "maybe", "not_attending"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MeetingAttendance = typeof meetingAttendance.$inferSelect;
+
+export const meetingDateOptions = mysqlTable("meetingDateOptions", {
+  id: int("id").autoincrement().primaryKey(),
+  meetingId: int("meetingId").notNull().references(() => meetings.id, { onDelete: "cascade" }),
+  proposedDate: timestamp("proposedDate").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MeetingDateOption = typeof meetingDateOptions.$inferSelect;
+
+export const meetingDateVotes = mysqlTable("meetingDateVotes", {
+  id: int("id").autoincrement().primaryKey(),
+  dateOptionId: int("dateOptionId").notNull().references(() => meetingDateOptions.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MeetingDateVote = typeof meetingDateVotes.$inferSelect;
+
+// ─── Congresses ───────────────────────────────────────────────────────────────
+
+export const congresses = mysqlTable("congresses", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id),
+  name: varchar("name", { length: 512 }).notNull(),
+  description: text("description"),
+  topic: text("topic"),
+  startDate: timestamp("startDate"),
+  endDate: timestamp("endDate"),
+  location: varchar("location", { length: 512 }),
+  modality: mysqlEnum("modality", ["in-person", "online", "hybrid"]).notNull(),
+  registrationFee: varchar("registrationFee", { length: 128 }),
+  websiteUrl: text("websiteUrl"),
+  cfpUrl: text("cfpUrl"),
+  cfpFileKey: text("cfpFileKey"),
+  cfpFileUrl: text("cfpFileUrl"),
+  abstractDeadline: timestamp("abstractDeadline"),
+  additionalInfo: text("additionalInfo"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Congress = typeof congresses.$inferSelect;
+export type InsertCongress = typeof congresses.$inferInsert;
+
+export const commProposals = mysqlTable("commProposals", {
+  id: int("id").autoincrement().primaryKey(),
+  congressId: int("congressId").notNull().references(() => congresses.id, { onDelete: "cascade" }),
+  proposerId: int("proposerId").notNull().references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  topic: text("topic"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CommProposal = typeof commProposals.$inferSelect;
+
+export const commProposalInterests = mysqlTable("commProposalInterests", {
+  id: int("id").autoincrement().primaryKey(),
+  communicationId: int("communicationId").notNull().references(() => commProposals.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Papers ───────────────────────────────────────────────────────────────────
+
+export const papers = mysqlTable("papers", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  abstract: text("abstract"),
+  keywords: text("keywords"),
+  targetJournal: varchar("targetJournal", { length: 512 }),
+  methodology: text("methodology"),
+  status: mysqlEnum("status", ["idea", "draft", "writing", "submitted", "under_review", "accepted", "published"]).default("idea").notNull(),
+  deadline: timestamp("deadline"),
+  doiUrl: text("doiUrl"),
+  additionalInfo: text("additionalInfo"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Paper = typeof papers.$inferSelect;
+export type InsertPaper = typeof papers.$inferInsert;
+
+export const paperContributors = mysqlTable("paperContributors", {
+  id: int("id").autoincrement().primaryKey(),
+  paperId: int("paperId").notNull().references(() => papers.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PaperContributor = typeof paperContributors.$inferSelect;
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+
+export const events = mysqlTable("events", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  description: text("description"),
+  eventDate: timestamp("eventDate"),
+  endDate: timestamp("endDate"),
+  location: varchar("location", { length: 512 }),
+  modality: mysqlEnum("modality", ["in-person", "online", "hybrid"]),
+  websiteUrl: text("websiteUrl"),
+  topic: text("topic"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = typeof events.$inferInsert;
+
+export const eventInterests = mysqlTable("eventInterests", {
+  id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+export const documents = mysqlTable("documents", {
+  id: int("id").autoincrement().primaryKey(),
+  uploaderId: int("uploaderId").notNull().references(() => users.id),
+  folderId: int("folderId"),
+  fileName: varchar("fileName", { length: 512 }).notNull(),
+  fileKey: text("fileKey").notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileSize: bigint("fileSize", { mode: "number" }),
+  mimeType: varchar("mimeType", { length: 128 }),
+  description: text("description"),
+  accessLevel: mysqlEnum("accessLevel", ["all", "admin"]).default("all").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;
+
+export const documentFolders = mysqlTable("documentFolders", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id),
+  parentId: int("parentId"),
+  name: varchar("name", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+export const tasks = mysqlTable("tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id),
+  assigneeId: int("assigneeId").references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["todo", "in_progress", "done"]).default("todo").notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high"]).default("medium").notNull(),
+  dueDate: timestamp("dueDate"),
+  relatedModule: varchar("relatedModule", { length: 64 }),
+  relatedId: int("relatedId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = typeof tasks.$inferInsert;
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 512 }).notNull(),
+  body: text("body"),
+  relatedModule: varchar("relatedModule", { length: 64 }),
+  relatedId: int("relatedId"),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
