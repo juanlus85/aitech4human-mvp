@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Menu, X, FlaskConical } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const navLinks = [
@@ -22,13 +22,12 @@ export default function PublicHeader() {
       <div className="container">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <FlaskConical className="w-4 h-4 text-primary" />
-            </div>
-            <span className="font-serif font-semibold text-foreground text-lg leading-tight">
-              AI<span className="text-primary">&</span>Tech4Human
-            </span>
+          <Link href="/" className="flex items-center group">
+            <img
+              src="/manus-storage/logo-horizontal_58ced6cb.png"
+              alt="AI&Tech4Human"
+              className="h-10 w-auto object-contain group-hover:opacity-90 transition-opacity"
+            />
           </Link>
 
           {/* Desktop Nav */}
