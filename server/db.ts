@@ -14,12 +14,25 @@ import {
 let _db: ReturnType<typeof drizzle> | null = null;
 
 /**
- * Convert all undefined values to null so mysql2 doesn't produce
- * a param-count mismatch when optional fields are not provided.
+ * Convert all undefined values to null and all Date objects to MySQL-compatible
+ * datetime strings (YYYY-MM-DD HH:MM:SS) so mysql2 never serializes dates with
+ * milliseconds, which MySQL TIMESTAMP columns reject.
  */
+function toMySQLDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  );
+}
+
 function sanitize<T extends Record<string, unknown>>(data: T): T {
   return Object.fromEntries(
-    Object.entries(data).map(([k, v]) => [k, v === undefined ? null : v])
+    Object.entries(data).map(([k, v]) => {
+      if (v === undefined) return [k, null];
+      if (v instanceof Date) return [k, toMySQLDatetime(v)];
+      return [k, v];
+    })
   ) as T;
 }
 export async function getDb() {
