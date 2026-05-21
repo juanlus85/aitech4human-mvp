@@ -54,10 +54,11 @@ const authRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { user, token } = await loginUser(input);
+        const isHttps = ctx.req.headers["x-forwarded-proto"] === "https" || ctx.req.protocol === "https";
         ctx.res.cookie("auth_token", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          secure: isHttps,
+          sameSite: "lax",
           maxAge: 7 * 24 * 60 * 60 * 1000,
           path: "/",
         });
