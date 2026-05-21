@@ -75,3 +75,10 @@
 - [x] Fix Documents crash — SelectItem value changed from "" to "none", folderId handling updated
 - [x] Events: show list of interested members (db.ts join with users + Events.tsx pill list UI)
 - [x] Messages: show previous thread history when replying (original message quote in reply dialog)
+
+## Round 3: Upload Fix
+
+- [x] Fix profile photo upload silently failing on Plesk — replaced base64-over-tRPC with multipart FormData REST endpoint /api/upload/photo (multer)
+- [x] Fix CV PDF upload silently failing on Plesk — replaced base64-over-tRPC with multipart FormData REST endpoint /api/upload/cv (multer)
+- [x] Added loading spinner on photo button and "Uploading..." state on CV button
+- [x] Added explicit onError toast so any future upload error is visible to the user

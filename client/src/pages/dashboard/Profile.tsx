@@ -54,43 +54,50 @@ export default function Profile() {
     onError: () => toast.error("Failed to update profile."),
   });
 
-  const photoMutation = trpc.profiles.uploadPhoto.useMutation({
-    onSuccess: () => {
-      utils.profiles.getMyProfile.invalidate();
-      toast.success("Photo updated.");
-    },
-  });
-
-  const cvMutation = trpc.profiles.uploadCv.useMutation({
-    onSuccess: () => {
-      utils.profiles.getMyProfile.invalidate();
-      toast.success("CV uploaded.");
-    },
-  });
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [cvUploading, setCvUploading] = useState(false);
 
   const photoRef = useRef<HTMLInputElement>(null);
   const cvRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(",")[1];
-      photoMutation.mutate({ base64, mimeType: file.type });
-    };
-    reader.readAsDataURL(file);
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+      const res = await fetch("/api/upload/photo", { method: "POST", credentials: "include", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Upload failed");
+      await utils.profiles.getMyProfile.invalidate();
+      toast.success("Photo updated.");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to upload photo.");
+    } finally {
+      setPhotoUploading(false);
+      if (photoRef.current) photoRef.current.value = "";
+    }
   };
 
-  const handleCvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCvChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(",")[1];
-      cvMutation.mutate({ base64, fileName: file.name });
-    };
-    reader.readAsDataURL(file);
+    setCvUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("cv", file);
+      const res = await fetch("/api/upload/cv", { method: "POST", credentials: "include", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Upload failed");
+      await utils.profiles.getMyProfile.invalidate();
+      toast.success("CV uploaded.");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to upload CV.");
+    } finally {
+      setCvUploading(false);
+      if (cvRef.current) cvRef.current.value = "";
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -128,10 +135,12 @@ export default function Profile() {
               </AvatarFallback>
             </Avatar>
             <button
-              onClick={() => photoRef.current?.click()}
-              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+              type="button"
+              onClick={() => !photoUploading && photoRef.current?.click()}
+              disabled={photoUploading}
+              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-60"
             >
-              <Camera className="w-3.5 h-3.5" />
+              {photoUploading ? <span className="w-3.5 h-3.5 border-2 border-white/60 border-t-white rounded-full animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
             </button>
             <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
           </div>
@@ -221,10 +230,10 @@ export default function Profile() {
                 size="sm"
                 className="gap-2 bg-white/60"
                 onClick={() => cvRef.current?.click()}
-                disabled={cvMutation.isPending}
+                disabled={cvUploading}
               >
                 <Upload className="w-4 h-4" />
-                {cvMutation.isPending ? "Uploading..." : "Upload PDF"}
+                {cvUploading ? "Uploading..." : "Upload PDF"}
               </Button>
               <input ref={cvRef} type="file" accept="application/pdf" className="hidden" onChange={handleCvChange} />
             </div>
