@@ -214,19 +214,31 @@ export default function Events() {
 
                   {detail.description && <p className="text-sm text-muted-foreground leading-relaxed">{detail.description}</p>}
 
-                  <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                    <p className="text-sm text-muted-foreground">
-                      {detail.interests?.length ?? 0} member{(detail.interests?.length ?? 0) !== 1 ? "s" : ""} interested
-                    </p>
-                    <Button
-                      variant={isInterested ? "default" : "outline"}
-                      size="sm"
-                      className={`gap-1.5 ${!isInterested ? "bg-white/60" : ""}`}
-                      onClick={() => interestMutation.mutate({ eventId: detail.id })}
-                    >
-                      <Star className="w-3.5 h-3.5" />
-                      {isInterested ? "Interested ✓" : "Mark as interested"}
-                    </Button>
+                  <div className="pt-2 border-t border-border/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-foreground">
+                        <Star className="w-3.5 h-3.5 inline mr-1 text-amber-500" />
+                        {detail.interests?.length ?? 0} member{(detail.interests?.length ?? 0) !== 1 ? "s" : ""} interested
+                      </p>
+                      <Button
+                        variant={isInterested ? "default" : "outline"}
+                        size="sm"
+                        className={`gap-1.5 ${!isInterested ? "bg-white/60" : ""}`}
+                        onClick={() => interestMutation.mutate({ eventId: detail.id })}
+                      >
+                        <Star className="w-3.5 h-3.5" />
+                        {isInterested ? "Interested ✓" : "Mark as interested"}
+                      </Button>
+                    </div>
+                    {detail.interests && detail.interests.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {detail.interests.map((i: any) => (
+                          <span key={i.userId} className="text-xs bg-muted/60 text-muted-foreground rounded-full px-2.5 py-1 border border-border/30">
+                            {i.userName ?? `Member #${i.userId}`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </>

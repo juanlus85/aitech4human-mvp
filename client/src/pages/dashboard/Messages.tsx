@@ -292,6 +292,15 @@ export default function Messages() {
                 <Send className="w-3.5 h-3.5" />{replyMutation.isPending ? "Sending..." : "Send Reply"}
               </Button>
             </form>
+            {selectedMsg && (
+              <div className="border-t border-border/40 pt-3 mt-1 space-y-1.5">
+                <p className="text-xs text-muted-foreground font-medium">
+                  ——— Original message from {selectedMsg.senderName ?? "Unknown"} · {format(new Date(selectedMsg.createdAt), "MMM d, yyyy 'at' HH:mm")} ———
+                </p>
+                <p className="text-xs font-semibold text-muted-foreground">{selectedMsg.subject}</p>
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed border-l-2 border-border/50 pl-3 max-h-32 overflow-y-auto">{selectedMsg.body}</p>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

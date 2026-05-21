@@ -41,7 +41,7 @@ export default function Documents() {
   const [uploading, setUploading] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     description: "",
-    folderId: "" as string,
+    folderId: "none" as string,
     accessLevel: "all" as "all" | "admin",
   });
   const [folderName, setFolderName] = useState("");
@@ -70,7 +70,7 @@ export default function Documents() {
       utils.documents.list.invalidate();
       setUploadOpen(false);
       setSelectedFile(null);
-      setUploadForm({ description: "", folderId: "", accessLevel: "all" });
+      setUploadForm({ description: "", folderId: "none", accessLevel: "all" });
       setUploading(false);
       toast.success("Document uploaded.");
     },
@@ -92,7 +92,7 @@ export default function Documents() {
         mimeType: selectedFile.type || "application/octet-stream",
         fileSize: selectedFile.size,
         description: uploadForm.description || undefined,
-        folderId: uploadForm.folderId ? parseInt(uploadForm.folderId) : undefined,
+        folderId: (uploadForm.folderId && uploadForm.folderId !== "none") ? parseInt(uploadForm.folderId) : undefined,
         accessLevel: uploadForm.accessLevel,
       });
     } catch {
@@ -196,7 +196,7 @@ export default function Documents() {
         {/* Upload dialog */}
         <Dialog open={uploadOpen} onOpenChange={(o) => {
           setUploadOpen(o);
-          if (!o) { setSelectedFile(null); setUploadForm({ description: "", folderId: "", accessLevel: "all" }); }
+          if (!o) { setSelectedFile(null); setUploadForm({ description: "", folderId: "none", accessLevel: "all" }); }
         }}>
           <DialogContent className="max-w-md">
             <DialogHeader><DialogTitle className="font-serif">Upload Document</DialogTitle></DialogHeader>
@@ -238,7 +238,7 @@ export default function Documents() {
                   <Select value={uploadForm.folderId} onValueChange={(v) => setUploadForm({ ...uploadForm, folderId: v })}>
                     <SelectTrigger><SelectValue placeholder="No folder" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No folder</SelectItem>
+                      <SelectItem value="none">No folder</SelectItem>
                       {folders?.map((f) => (
                         <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
                       ))}

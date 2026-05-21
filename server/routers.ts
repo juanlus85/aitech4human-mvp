@@ -328,9 +328,9 @@ const meetingsRouter = router({
       meetingLink: z.string().optional(),
       agenda: z.string().optional(),
       type: z.enum(["fixed", "poll"]),
-      fixedDate: z.date().optional(),
-      pollDeadline: z.date().optional(),
-      dateOptions: z.array(z.date()).optional(),
+      fixedDate: z.coerce.date().optional(),
+      pollDeadline: z.coerce.date().optional(),
+      dateOptions: z.array(z.coerce.date()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const { dateOptions, ...meetingData } = input;
@@ -366,7 +366,7 @@ const meetingsRouter = router({
       meetingLink: z.string().optional(),
       agenda: z.string().optional(),
       status: z.enum(["scheduled", "cancelled", "completed"]).optional(),
-      finalDate: z.date().optional(),
+      finalDate: z.coerce.date().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const meeting = await getMeetingById(input.id);
@@ -440,14 +440,14 @@ const congressesRouter = router({
       name: z.string().min(1),
       description: z.string().optional(),
       topic: z.string().optional(),
-      startDate: z.date().optional(),
-      endDate: z.date().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
       location: z.string().optional(),
       modality: z.enum(["in-person", "online", "hybrid"]),
       registrationFee: z.string().optional(),
       websiteUrl: z.string().optional(),
       cfpUrl: z.string().optional(),
-      abstractDeadline: z.date().optional(),
+      abstractDeadline: z.coerce.date().optional(),
       additionalInfo: z.string().optional(),
     }))
     .mutation(({ input, ctx }) => createCongress({ ...input, creatorId: ctx.user.id })),
@@ -458,14 +458,14 @@ const congressesRouter = router({
       name: z.string().optional(),
       description: z.string().optional(),
       topic: z.string().optional(),
-      startDate: z.date().optional(),
-      endDate: z.date().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
       location: z.string().optional(),
       modality: z.enum(["in-person", "online", "hybrid"]).optional(),
       registrationFee: z.string().optional(),
       websiteUrl: z.string().optional(),
       cfpUrl: z.string().optional(),
-      abstractDeadline: z.date().optional(),
+      abstractDeadline: z.coerce.date().optional(),
       additionalInfo: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -524,7 +524,7 @@ const papersRouter = router({
       targetJournal: z.string().optional(),
       methodology: z.string().optional(),
       status: z.enum(["idea", "draft", "writing", "submitted", "under_review", "accepted", "published"]).default("idea"),
-      deadline: z.date().optional(),
+      deadline: z.coerce.date().optional(),
       additionalInfo: z.string().optional(),
     }))
     .mutation(({ input, ctx }) => createPaper({ ...input, creatorId: ctx.user.id })),
@@ -538,7 +538,7 @@ const papersRouter = router({
       targetJournal: z.string().optional(),
       methodology: z.string().optional(),
       status: z.enum(["idea", "draft", "writing", "submitted", "under_review", "accepted", "published"]).optional(),
-      deadline: z.date().optional(),
+      deadline: z.coerce.date().optional(),
       doiUrl: z.string().optional(),
       additionalInfo: z.string().optional(),
     }))
@@ -586,8 +586,8 @@ const eventsRouter = router({
     .input(z.object({
       title: z.string().min(1),
       description: z.string().optional(),
-      eventDate: z.date().optional(),
-      endDate: z.date().optional(),
+      eventDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
       location: z.string().optional(),
       modality: z.enum(["in-person", "online", "hybrid"]).optional(),
       websiteUrl: z.string().optional(),
@@ -600,8 +600,8 @@ const eventsRouter = router({
       id: z.number(),
       title: z.string().optional(),
       description: z.string().optional(),
-      eventDate: z.date().optional(),
-      endDate: z.date().optional(),
+      eventDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
       location: z.string().optional(),
       modality: z.enum(["in-person", "online", "hybrid"]).optional(),
       websiteUrl: z.string().optional(),
@@ -697,7 +697,7 @@ const tasksRouter = router({
       assigneeId: z.number().optional(),
       status: z.enum(["todo", "in_progress", "done"]).default("todo"),
       priority: z.enum(["low", "medium", "high"]).default("medium"),
-      dueDate: z.date().optional(),
+      dueDate: z.coerce.date().optional(),
       relatedModule: z.string().optional(),
       relatedId: z.number().optional(),
     }))
@@ -711,7 +711,7 @@ const tasksRouter = router({
       assigneeId: z.number().optional(),
       status: z.enum(["todo", "in_progress", "done"]).optional(),
       priority: z.enum(["low", "medium", "high"]).optional(),
-      dueDate: z.date().optional(),
+      dueDate: z.coerce.date().optional(),
     }))
     .mutation(({ input }) => {
       const { id, ...data } = input;

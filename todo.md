@@ -66,3 +66,12 @@
 - [x] Vitest tests for authentication, roles and main procedures
 - [x] Error handling and empty states in all modules
 - [x] Final checkpoint and delivery to user
+
+## Round 2: Bug Fixes & New Features
+
+- [x] Fix Meetings insert error — z.coerce.date() for all date fields in routers.ts
+- [x] Fix Congresses insert error — z.coerce.date() for all date fields in routers.ts
+- [x] Fix Papers insert error — z.coerce.date() for all date fields in routers.ts
+- [x] Fix Documents crash — SelectItem value changed from "" to "none", folderId handling updated
+- [x] Events: show list of interested members (db.ts join with users + Events.tsx pill list UI)
+- [x] Messages: show previous thread history when replying (original message quote in reply dialog)

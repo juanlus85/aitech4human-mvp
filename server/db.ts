@@ -482,7 +482,17 @@ export async function deleteEvent(id: number) {
 export async function getEventInterests(eventId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(eventInterests).where(eq(eventInterests.eventId, eventId));
+  return db
+    .select({
+      id: eventInterests.id,
+      eventId: eventInterests.eventId,
+      userId: eventInterests.userId,
+      createdAt: eventInterests.createdAt,
+      userName: users.name,
+    })
+    .from(eventInterests)
+    .leftJoin(users, eq(users.id, eventInterests.userId))
+    .where(eq(eventInterests.eventId, eventId));
 }
 
 export async function toggleEventInterest(eventId: number, userId: number) {
