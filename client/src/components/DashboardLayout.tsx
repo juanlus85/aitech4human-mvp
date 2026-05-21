@@ -98,7 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full glass-card rounded-2xl bracket-accent">
-          <img src="/manus-storage/logo-icon_3e913332.png" alt="AI&Tech4Human" className="w-16 h-16 object-contain" />
+          <img src="/logo-icon.png" alt="AI&Tech4Human" className="w-16 h-16 object-contain" />
           <div className="text-center">
             <h1 className="font-serif text-2xl font-semibold text-foreground">Member Area</h1>
             <p className="text-sm text-muted-foreground mt-2">
@@ -210,7 +210,7 @@ function DashboardLayoutContent({
                 className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors shrink-0"
               >
                 {isCollapsed ? (
-                  <img src="/manus-storage/logo-icon_3e913332.png" alt="logo" className="h-6 w-6 object-contain" />
+                  <img src="/logo-icon.png" alt="logo" className="h-6 w-6 object-contain" />
                 ) : (
                   <PanelLeft className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -218,7 +218,7 @@ function DashboardLayoutContent({
               {!isCollapsed && (
                 <div className="flex items-center min-w-0">
                   <img
-                    src="/manus-storage/logo-horizontal_58ced6cb.png"
+                    src="/logo-horizontal.png"
                     alt="AI&Tech4Human"
                     className="h-7 w-auto object-contain"
                   />
