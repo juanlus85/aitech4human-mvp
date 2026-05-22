@@ -178,7 +178,7 @@ function DashboardLayoutContent({
 
   const NavGroup = ({ items, label }: { items: typeof mainNav; label?: string }) => (
     <SidebarGroup>
-      {label && !isCollapsed && <SidebarGroupLabel className="text-xs text-muted-foreground/60 uppercase tracking-wider px-2 h-6">{label}</SidebarGroupLabel>}
+      {label && !isCollapsed && !isMobile && <SidebarGroupLabel className="text-xs text-muted-foreground/60 uppercase tracking-wider px-2 h-6">{label}</SidebarGroupLabel>}
       <SidebarMenu className="px-2 py-0">
         {items.map((item) => {
           const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
