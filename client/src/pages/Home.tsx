@@ -61,10 +61,10 @@ export default function Home() {
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 animate-fade-in-up stagger-children" style={{ animationDelay: "240ms" }}>
             {[
-              { icon: Users, label: "Researchers", value: members?.length ?? "—" },
-              { icon: BookOpen, label: "Publications", value: "50+" },
-              { icon: CalendarDays, label: "Years active", value: "8" },
-              { icon: Globe, label: "Partner universities", value: "12" },
+              { icon: Users, label: "Researchers", value: members?.length ?? "11" },
+              { icon: BookOpen, label: "Publications", value: "-" },
+              { icon: CalendarDays, label: "Years active", value: "1" },
+              { icon: Globe, label: "Partner universities", value: "3" },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="glass-card rounded-xl p-5 bracket-corner animate-fade-in-up">
                 <Icon className="w-5 h-5 text-primary mb-2" />
