@@ -117,3 +117,17 @@
 - [x] Create admin Settings page: OpenAI API key configuration
 - [x] Store SMTP/OpenAI settings in DB (appSettings table)
 - [x] Version indicator in Settings page footer
+
+## Round 11 — Real Email Notifications via SMTP
+
+- [ ] Install nodemailer and @types/nodemailer
+- [ ] Create server/email.ts helper: reads SMTP config from appSettings DB, sends email via Nodemailer
+- [ ] Add getAllUserEmails() helper to db.ts to get all active member emails
+- [ ] Add notifyEmail: boolean to Congress create procedure and send email to all members when true
+- [ ] Add notifyEmail: boolean to Event create procedure and send email to all members when true
+- [ ] Add notifyEmail: boolean to Paper create procedure and send email to all members when true
+- [ ] Add notifyEmail: boolean to Announcement create procedure and send email to all members when true
+- [ ] Wire notifyEmail checkbox state to the create mutation in Congresses.tsx
+- [ ] Wire notifyEmail checkbox state to the create mutation in Events.tsx
+- [ ] Wire notifyEmail checkbox state to the create mutation in Papers.tsx
+- [ ] Wire notifyEmail checkbox state to the create mutation in Announcements.tsx

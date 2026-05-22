@@ -814,3 +814,11 @@ export async function upsertAppSetting(key: string, value: string) {
     await db.insert(appSettings).values({ settingKey: key, settingValue: value });
   }
 }
+
+// ─── Email helpers ─────────────────────────────────────────────────────────────
+export async function getAllUserEmails(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ email: users.email }).from(users);
+  return rows.map((r) => r.email).filter(Boolean) as string[];
+}

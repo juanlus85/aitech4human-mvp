@@ -30,6 +30,8 @@ import {
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
+import { notifyMembers } from "./email";
+import { getAllUserEmails } from "./db";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -457,8 +459,29 @@ const congressesRouter = router({
       paperDeadline: z.coerce.date().optional(),
       registrationDeadline: z.coerce.date().optional(),
       additionalInfo: z.string().optional(),
+      notifyEmail: z.boolean().optional(),
     }))
-    .mutation(({ input, ctx }) => createCongress({ ...input, creatorId: ctx.user.id })),
+    .mutation(async ({ input, ctx }) => {
+      const { notifyEmail, ...data } = input;
+      const result = await createCongress({ ...data, creatorId: ctx.user.id });
+      if (notifyEmail && result) {
+        const emails = await getAllUserEmails();
+        await notifyMembers({
+          subject: `New Conference: ${result.name}`,
+          title: `New Conference: ${result.name}`,
+          body: [
+            result.acronym ? `Acronym: ${result.acronym}` : "",
+            result.topic ? `Topic: ${result.topic}` : "",
+            result.location ? `Location: ${result.location}` : "",
+            result.startDate ? `Start date: ${new Date(result.startDate).toLocaleDateString()}` : "",
+            result.websiteUrl ? `Website: ${result.websiteUrl}` : "",
+            result.description ? `\n${result.description}` : "",
+          ].filter(Boolean).join("\n"),
+          memberEmails: emails,
+        });
+      }
+      return result;
+    }),
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -537,8 +560,26 @@ const papersRouter = router({
       status: z.enum(["idea", "draft", "writing", "submitted", "under_review", "accepted", "published"]).default("idea"),
       deadline: z.coerce.date().optional(),
       additionalInfo: z.string().optional(),
+      notifyEmail: z.boolean().optional(),
     }))
-    .mutation(({ input, ctx }) => createPaper({ ...input, creatorId: ctx.user.id })),
+    .mutation(async ({ input, ctx }) => {
+      const { notifyEmail, ...data } = input;
+      const result = await createPaper({ ...data, creatorId: ctx.user.id });
+      if (notifyEmail && result) {
+        const emails = await getAllUserEmails();
+        await notifyMembers({
+          subject: `New Paper: ${result.title}`,
+          title: `New Paper: ${result.title}`,
+          body: [
+            result.targetJournal ? `Target journal: ${result.targetJournal}` : "",
+            result.keywords ? `Keywords: ${result.keywords}` : "",
+            result.abstract ? `\n${result.abstract}` : "",
+          ].filter(Boolean).join("\n"),
+          memberEmails: emails,
+        });
+      }
+      return result;
+    }),
 
   update: protectedProcedure
     .input(z.object({
@@ -603,8 +644,29 @@ const eventsRouter = router({
       modality: z.enum(["in-person", "online", "hybrid"]).optional(),
       websiteUrl: z.string().optional(),
       topic: z.string().optional(),
+      notifyEmail: z.boolean().optional(),
     }))
-    .mutation(({ input, ctx }) => createEvent({ ...input, creatorId: ctx.user.id })),
+    .mutation(async ({ input, ctx }) => {
+      const { notifyEmail, ...data } = input;
+      const result = await createEvent({ ...data, creatorId: ctx.user.id });
+      if (notifyEmail && result) {
+        const emails = await getAllUserEmails();
+        await notifyMembers({
+          subject: `New Event: ${result.title}`,
+          title: `New Event: ${result.title}`,
+          body: [
+            result.topic ? `Topic: ${result.topic}` : "",
+            result.location ? `Location: ${result.location}` : "",
+            result.eventDate ? `Date: ${new Date(result.eventDate).toLocaleDateString()}` : "",
+            result.modality ? `Modality: ${result.modality}` : "",
+            result.websiteUrl ? `Website: ${result.websiteUrl}` : "",
+            result.description ? `\n${result.description}` : "",
+          ].filter(Boolean).join("\n"),
+          memberEmails: emails,
+        });
+      }
+      return result;
+    }),
 
   update: protectedProcedure
     .input(z.object({
@@ -854,14 +916,25 @@ const announcementsRouter = router({
       subject: z.string().min(1).max(512),
       body: z.string().min(1),
       isPinned: z.boolean().optional(),
+      notifyEmail: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      return createAnnouncement({
+      const result = await createAnnouncement({
         authorId: ctx.user.id,
         subject: input.subject,
         body: input.body,
         isPinned: (input.isPinned ?? false) ? 1 : 0,
       });
+      if (input.notifyEmail && result) {
+        const emails = await getAllUserEmails();
+        await notifyMembers({
+          subject: `Announcement: ${result.subject}`,
+          title: result.subject,
+          body: result.body,
+          memberEmails: emails,
+        });
+      }
+      return result;
     }),
 
   update: protectedProcedure

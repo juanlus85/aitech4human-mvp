@@ -48,6 +48,7 @@ export default function Papers() {
     methodology: "", status: "idea" as PaperStatus, deadlineStr: "", additionalInfo: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [notifyEmail, setNotifyEmail] = useState(false);
   const [editForm, setEditForm] = useState<Partial<typeof emptyForm & { id: number }>>({});
 
   const { data: papers, isLoading } = trpc.papers.list.useQuery();
@@ -61,6 +62,7 @@ export default function Papers() {
       utils.papers.list.invalidate();
       setCreateOpen(false);
       setForm(emptyForm);
+      setNotifyEmail(false);
       toast.success("Paper added.");
     },
     onError: (e) => toast.error(e.message),
@@ -102,6 +104,7 @@ export default function Papers() {
       status: form.status,
       deadline: form.deadlineStr ? new Date(form.deadlineStr) : undefined,
       additionalInfo: form.additionalInfo || undefined,
+      notifyEmail,
     });
   };
 
@@ -245,7 +248,7 @@ export default function Papers() {
                 <Textarea value={form.additionalInfo} onChange={(e) => setForm({ ...form, additionalInfo: e.target.value })} rows={2} />
               </div>
               <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                <Checkbox id="notifyEmailPaper" />
+                <Checkbox id="notifyEmailPaper" checked={notifyEmail} onCheckedChange={(v) => setNotifyEmail(!!v)} />
                 <Label htmlFor="notifyEmailPaper" className="cursor-pointer text-sm font-normal text-muted-foreground">
                   Notify members by email
                 </Label>

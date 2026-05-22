@@ -290,11 +290,7 @@ function CreateAnnouncementDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !body.trim()) return;
-    createMutation.mutate({ subject: subject.trim(), body: body.trim(), isPinned });
-    // Note: email notification would be sent server-side when SMTP is configured
-    if (notifyEmail) {
-      toast.info("Email notification will be sent once SMTP is configured.");
-    }
+    createMutation.mutate({ subject: subject.trim(), body: body.trim(), isPinned, notifyEmail });
   };
 
   return (

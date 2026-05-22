@@ -32,6 +32,7 @@ export default function Congresses() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [notifyEmail, setNotifyEmail] = useState(false);
   const [proposalTitle, setProposalTitle] = useState("");
   const [proposalTopic, setProposalTopic] = useState("");
 
@@ -46,6 +47,7 @@ export default function Congresses() {
       utils.congresses.list.invalidate();
       setCreateOpen(false);
       setForm(emptyForm);
+      setNotifyEmail(false);
       toast.success("Conference added.");
     },
     onError: (e) => toast.error(e.message),
@@ -95,6 +97,7 @@ export default function Congresses() {
       paperDeadline: form.paperDeadlineStr ? new Date(form.paperDeadlineStr) : undefined,
       registrationDeadline: form.registrationDeadlineStr ? new Date(form.registrationDeadlineStr) : undefined,
       additionalInfo: form.additionalInfo || undefined,
+      notifyEmail,
     });
   };
 
@@ -232,7 +235,7 @@ export default function Congresses() {
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                <Checkbox id="notifyEmailCongress" />
+                <Checkbox id="notifyEmailCongress" checked={notifyEmail} onCheckedChange={(v) => setNotifyEmail(!!v)} />
                 <Label htmlFor="notifyEmailCongress" className="cursor-pointer text-sm font-normal text-muted-foreground">
                   Notify members by email
                 </Label>

@@ -32,6 +32,7 @@ export default function Events() {
     websiteUrl: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [notifyEmail, setNotifyEmail] = useState(false);
 
   const { data: events, isLoading } = trpc.events.list.useQuery();
   const { data: detail } = trpc.events.getById.useQuery({ id: selected?.id ?? 0 }, { enabled: !!selected?.id });
@@ -41,6 +42,7 @@ export default function Events() {
       utils.events.list.invalidate();
       setCreateOpen(false);
       setForm(emptyForm);
+      setNotifyEmail(false);
       toast.success("Event added.");
     },
     onError: (e) => toast.error(e.message),
@@ -152,7 +154,7 @@ export default function Events() {
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
               </div>
               <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                <Checkbox id="notifyEmailEvent" />
+                <Checkbox id="notifyEmailEvent" checked={notifyEmail} onCheckedChange={(v) => setNotifyEmail(!!v)} />
                 <Label htmlFor="notifyEmailEvent" className="cursor-pointer text-sm font-normal text-muted-foreground">
                   Notify members by email
                 </Label>
@@ -167,6 +169,7 @@ export default function Events() {
                   modality: form.modality,
                   websiteUrl: form.websiteUrl || undefined,
                   topic: form.topic || undefined,
+                  notifyEmail,
                 })}
                 disabled={!form.title || createMutation.isPending}>
                 {createMutation.isPending ? "Saving..." : "Add Event"}
