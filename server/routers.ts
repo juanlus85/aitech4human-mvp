@@ -1049,7 +1049,7 @@ const linksRouter = router({
   create: protectedProcedure
     .input(z.object({
       title: z.string().min(1),
-      url: z.string().url(),
+      url: z.string().min(1),
       description: z.string().optional(),
       category: z.string().optional(),
     }))
@@ -1058,7 +1058,7 @@ const linksRouter = router({
     .input(z.object({
       id: z.number(),
       title: z.string().optional(),
-      url: z.string().url().optional(),
+      url: z.string().optional(),
       description: z.string().optional(),
       category: z.string().optional(),
     }))
