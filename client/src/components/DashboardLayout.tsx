@@ -178,8 +178,8 @@ function DashboardLayoutContent({
 
   const NavGroup = ({ items, label }: { items: typeof mainNav; label?: string }) => (
     <SidebarGroup>
-      {label && !isCollapsed && <SidebarGroupLabel className="text-xs text-muted-foreground/60 uppercase tracking-wider px-2">{label}</SidebarGroupLabel>}
-      <SidebarMenu className="px-2 py-0.5">
+      {label && !isCollapsed && <SidebarGroupLabel className="text-xs text-muted-foreground/60 uppercase tracking-wider px-2 h-6">{label}</SidebarGroupLabel>}
+      <SidebarMenu className="px-2 py-0">
         {items.map((item) => {
           const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
           return (
@@ -188,7 +188,7 @@ function DashboardLayoutContent({
                 isActive={isActive}
                 onClick={() => navigate(item.path)}
                 tooltip={item.label}
-                className="h-9 font-normal"
+                className="h-8 font-normal text-sm"
               >
                 <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                 <span>{item.label}</span>
@@ -207,7 +207,7 @@ function DashboardLayoutContent({
     <>
       <div className="relative" ref={sidebarRef}>
         <Sidebar collapsible="icon" className="border-r border-border/50 bg-sidebar/80 backdrop-blur-sm" disableTransition={isResizing}>
-          <SidebarHeader className="h-14 justify-center border-b border-border/50">
+          <SidebarHeader className="h-12 justify-center border-b border-border/50 shrink-0">
             <div className="flex items-center gap-2.5 px-2">
               <button
                 onClick={toggleSidebar}
@@ -231,7 +231,7 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 py-2">
+          <SidebarContent className="gap-0 py-1 overflow-y-auto">
             <NavGroup items={mainNav} />
             <NavGroup items={collaborationNav} label="Collaboration" />
             <NavGroup items={resourcesNav} label="Resources" />
