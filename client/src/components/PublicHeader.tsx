@@ -19,13 +19,13 @@ export default function PublicHeader() {
   return (
     <header className="sticky top-0 z-50 glass-card border-b border-border/50">
       <div className="container">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
             <img
               src="/uploads/logo.png"
               alt="AI&Tech4Human"
-              className="h-10 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              className="h-16 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />
           </Link>
 
