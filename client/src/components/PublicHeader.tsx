@@ -23,7 +23,7 @@ export default function PublicHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center group">
             <img
-              src="/manus-storage/logo-transparent_476022c9.png"
+              src="/manus-storage/logo-transparent_29a7be18.png"
               alt="AI&Tech4Human"
               className="h-10 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />

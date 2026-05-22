@@ -39,6 +39,8 @@ function AnnouncementsContent() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set());
+  const [expandedBodies, setExpandedBodies] = useState<Set<number>>(new Set());
+  const toggleBody = (id: number) => setExpandedBodies((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const { data: detail } = trpc.announcements.getById.useQuery(
     { id: selectedId! },
@@ -119,7 +121,21 @@ function AnnouncementsContent() {
                         )}
                       </div>
                       <h2 className="font-semibold text-base text-foreground mt-1">{ann.subject}</h2>
-                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-3">{ann.body}</p>
+                      <div className="mt-1">
+                        <p
+                          className={`text-sm text-muted-foreground whitespace-pre-wrap transition-all ${expandedBodies.has(ann.id) ? '' : 'line-clamp-3'}`}
+                        >
+                          {ann.body}
+                        </p>
+                        {ann.body.length > 180 && (
+                          <button
+                            onClick={() => toggleBody(ann.id)}
+                            className="text-xs text-primary hover:underline mt-1 font-medium"
+                          >
+                            {expandedBodies.has(ann.id) ? 'Show less ▲' : 'Read more ▼'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {(isOwner || isAdmin) && (

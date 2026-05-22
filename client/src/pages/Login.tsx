@@ -42,7 +42,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <Link href="/">
             <div className="inline-flex items-center justify-center cursor-pointer">
-              <img src="/manus-storage/logo-transparent_476022c9.png" alt="AI&Tech4Human" className="h-14 object-contain" />
+              <img src="/manus-storage/logo-transparent_29a7be18.png" alt="AI&Tech4Human" className="h-14 object-contain" />
             </div>
           </Link>
           <p className="text-sm text-muted-foreground mt-3">Member Area — Sign in to continue</p>
