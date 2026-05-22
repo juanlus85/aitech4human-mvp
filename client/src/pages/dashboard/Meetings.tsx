@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, CalendarDays, Video, MapPin, Clock, Vote, CheckCircle2, HelpCircle, XCircle, Trash2, ChevronRight, Link2 } from "lucide-react";
+import { Plus, CalendarDays, Video, MapPin, Clock, Vote, CheckCircle2, HelpCircle, XCircle, Trash2, ChevronRight, Link2, Pencil } from "lucide-react";
 
 const ATTENDANCE = [
   { value: "attending" as const, label: "I will attend", icon: CheckCircle2, color: "text-emerald-600" },
@@ -38,6 +38,8 @@ export default function Meetings() {
   const utils = trpc.useUtils();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", description: "", modality: "online" as "online" | "in-person" | "hybrid", location: "", meetingLink: "", agenda: "", status: "scheduled" as "scheduled" | "cancelled" | "completed" });
   const [notifyEmail, setNotifyEmail] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -127,6 +129,15 @@ export default function Meetings() {
     createMutation.mutate({ ...payload, notifyEmail });
   };
 
+  const updateMutation = trpc.meetings.update.useMutation({
+    onSuccess: () => {
+      utils.meetings.list.invalidate();
+      if (selectedId) utils.meetings.getById.invalidate({ id: selectedId });
+      setEditOpen(false);
+      toast.success("Meeting updated.");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const myAttendance = detail?.attendance?.find((a: any) => a.userId === user?.id);
 
   return (
@@ -291,10 +302,16 @@ export default function Meetings() {
                   <div className="flex items-start justify-between gap-3">
                     <DialogTitle className="font-serif text-xl">{detail.title}</DialogTitle>
                     {(detail.organizerId === user?.id || user?.role === "admin") && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0"
-                        onClick={() => { if (confirm("Delete this meeting?")) deleteMutation.mutate({ id: detail.id }); }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => { setEditForm({ title: detail.title, description: detail.description ?? "", modality: detail.modality as any, location: detail.location ?? "", meetingLink: detail.meetingLink ?? "", agenda: detail.agenda ?? "", status: (detail.status ?? "scheduled") as any }); setEditOpen(true); }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                          onClick={() => { if (confirm("Delete this meeting?")) deleteMutation.mutate({ id: detail.id }); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </DialogHeader>
@@ -423,6 +440,61 @@ export default function Meetings() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-serif">Edit Meeting</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Title *</Label>
+              <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Modality</Label>
+              <Select value={editForm.modality} onValueChange={(v: any) => setEditForm({ ...editForm, modality: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="online">Online</SelectItem>
+                  <SelectItem value="in-person">In Person</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Location / Address</Label>
+              <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Meeting Link</Label>
+              <Input value={editForm.meetingLink} onChange={(e) => setEditForm({ ...editForm, meetingLink: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Agenda / Topics</Label>
+              <Textarea value={editForm.agenda} onChange={(e) => setEditForm({ ...editForm, agenda: e.target.value })} rows={3} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={editForm.status} onValueChange={(v: any) => setEditForm({ ...editForm, status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" disabled={!editForm.title || updateMutation.isPending}
+              onClick={() => selectedId && updateMutation.mutate({ id: selectedId, ...editForm, description: editForm.description || undefined, location: editForm.location || undefined, meetingLink: editForm.meetingLink || undefined, agenda: editForm.agenda || undefined })}>
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -131,3 +131,24 @@
 - [x] Wire notifyEmail checkbox state to the create mutation in Events.tsx
 - [x] Wire notifyEmail checkbox state to the create mutation in Papers.tsx
 - [x] Wire notifyEmail checkbox state to the create mutation in Announcements.tsx
+
+## Round 12 — Logo & Announcements
+
+- [x] Fix logo URL in DashboardLayout, PublicHeader, Login (new URL: /manus-storage/logo-transparent_29a7be18.png)
+- [x] Add expand/collapse "Read more / Show less" to Announcements body text
+- [x] Update homepage stats: Publications=-, Years active=1, Partner universities=3
+
+## Round 13 — Edit/Delete, Attendance, Rename, Project Proposals
+
+- [ ] Fix broken logo in Links page
+- [ ] Add edit/delete to Announcements (own posts + admin)
+- [ ] Add edit/delete to Meetings
+- [ ] Add edit/delete to Events
+- [ ] Add edit/delete to Conferences
+- [ ] Add edit/delete to Papers
+- [ ] Add edit/delete to Links
+- [ ] Add edit/delete to Documents
+- [ ] Add attendance tracking to Conferences proposals (interested + will attend/not sure/cannot attend)
+- [ ] Show who is interested in each Conference proposal
+- [ ] Rename "Papers" → "Paper Proposals" throughout UI and sidebar
+- [ ] Create Project Proposals section (schema, backend, frontend, sidebar nav)

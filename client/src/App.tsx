@@ -31,6 +31,7 @@ import Tasks from "./pages/dashboard/Tasks";
 import Notifications from "./pages/dashboard/Notifications";
 import Assistant from "./pages/dashboard/Assistant";
 import Calendar from "./pages/dashboard/Calendar";
+import ProjectProposals from "./pages/dashboard/ProjectProposals";
 
 // Admin pages
 import AdminUsers from "./pages/dashboard/admin/AdminUsers";
@@ -64,6 +65,7 @@ function Router() {
       <Route path="/dashboard/notifications" component={Notifications} />
       <Route path="/dashboard/assistant" component={Assistant} />
       <Route path="/dashboard/calendar" component={Calendar} />
+      <Route path="/dashboard/project-proposals" component={ProjectProposals} />
 
       {/* Admin */}
       <Route path="/dashboard/settings" component={Settings} />

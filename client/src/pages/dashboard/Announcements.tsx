@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Megaphone, Plus, Reply, Trash2, Pin, ChevronDown, ChevronUp, Paperclip, Send } from "lucide-react";
+import { Megaphone, Plus, Reply, Trash2, Pin, ChevronDown, ChevronUp, Paperclip, Send, Pencil } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 function initials(name?: string | null) {
@@ -40,6 +40,7 @@ function AnnouncementsContent() {
   const [showCreate, setShowCreate] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set());
   const [expandedBodies, setExpandedBodies] = useState<Set<number>>(new Set());
+  const [editAnn, setEditAnn] = useState<{ id: number; subject: string; body: string; isPinned: boolean } | null>(null);
   const toggleBody = (id: number) => setExpandedBodies((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const { data: detail } = trpc.announcements.getById.useQuery(
@@ -52,6 +53,15 @@ function AnnouncementsContent() {
       utils.announcements.list.invalidate();
       if (selectedId) setSelectedId(null);
       toast.success("Announcement deleted");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateMutation = trpc.announcements.update.useMutation({
+    onSuccess: () => {
+      utils.announcements.list.invalidate();
+      setEditAnn(null);
+      toast.success("Announcement updated");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -139,12 +149,20 @@ function AnnouncementsContent() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {(isOwner || isAdmin) && (
-                        <button
-                          onClick={() => deleteMutation.mutate({ id: ann.id })}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setEditAnn({ id: ann.id, subject: ann.subject, body: ann.body, isPinned: !!ann.isPinned })}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteMutation.mutate({ id: ann.id })}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -186,6 +204,35 @@ function AnnouncementsContent() {
           setShowCreate(false);
         }}
       />
+      {/* Edit dialog */}
+      <Dialog open={!!editAnn} onOpenChange={(v) => !v && setEditAnn(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle className="font-serif">Edit Announcement</DialogTitle></DialogHeader>
+          {editAnn && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Subject *</Label>
+                <Input value={editAnn.subject} onChange={(e) => setEditAnn({ ...editAnn, subject: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Message *</Label>
+                <Textarea value={editAnn.body} onChange={(e) => setEditAnn({ ...editAnn, body: e.target.value })} rows={6} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="editIsPinned" checked={editAnn.isPinned} onCheckedChange={(v) => setEditAnn({ ...editAnn, isPinned: !!v })} />
+                <Label htmlFor="editIsPinned" className="cursor-pointer text-sm font-normal">Pin this announcement</Label>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditAnn(null)}>Cancel</Button>
+                <Button disabled={!editAnn.subject.trim() || !editAnn.body.trim() || updateMutation.isPending}
+                  onClick={() => updateMutation.mutate({ id: editAnn.id, subject: editAnn.subject, body: editAnn.body, isPinned: editAnn.isPinned })}>
+                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

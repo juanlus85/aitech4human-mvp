@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, Trophy, CalendarDays, MapPin, DollarSign, Globe, Trash2, ChevronRight, Star, StarOff, MessageSquarePlus } from "lucide-react";
+import { Plus, Trophy, CalendarDays, MapPin, DollarSign, Globe, Trash2, ChevronRight, Star, StarOff, MessageSquarePlus, Pencil } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const MODALITIES = ["in-person", "online", "hybrid"] as const;
@@ -35,6 +35,8 @@ export default function Congresses() {
   const [notifyEmail, setNotifyEmail] = useState(false);
   const [proposalTitle, setProposalTitle] = useState("");
   const [proposalTopic, setProposalTopic] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", acronym: "", description: "", topic: "", startDateStr: "", endDateStr: "", location: "", country: "", modality: "in-person" as typeof MODALITIES[number], registrationFee: "", websiteUrl: "", cfpUrl: "", abstractDeadlineStr: "", paperDeadlineStr: "", registrationDeadlineStr: "", additionalInfo: "" });
 
   const { data: congresses, isLoading } = trpc.congresses.list.useQuery();
   const { data: detail } = trpc.congresses.getById.useQuery(
@@ -101,7 +103,18 @@ export default function Congresses() {
     });
   };
 
-  const canDelete = detail?.creatorId === user?.id || user?.role === "admin";
+  const canEdit = detail?.creatorId === user?.id || user?.role === "admin";
+  const canDelete = canEdit;
+
+  const updateMutation = trpc.congresses.update.useMutation({
+    onSuccess: () => {
+      utils.congresses.list.invalidate();
+      if (selectedId) utils.congresses.getById.invalidate({ id: selectedId });
+      setEditOpen(false);
+      toast.success("Conference updated.");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
     <DashboardLayout>
@@ -255,11 +268,17 @@ export default function Congresses() {
                 <DialogHeader>
                   <div className="flex items-start justify-between gap-2">
                     <DialogTitle className="font-serif text-xl flex-1">{detail.name}</DialogTitle>
-                    {canDelete && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0"
-                        onClick={() => { if (confirm("Delete this conference?")) deleteMutation.mutate({ id: detail.id }); }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                    {canEdit && (
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => { setEditForm({ name: detail.name, acronym: detail.acronym ?? "", description: detail.description ?? "", topic: detail.topic ?? "", startDateStr: detail.startDate ? new Date(detail.startDate).toISOString().slice(0, 10) : "", endDateStr: detail.endDate ? new Date(detail.endDate).toISOString().slice(0, 10) : "", location: detail.location ?? "", country: detail.country ?? "", modality: (detail.modality ?? "in-person") as any, registrationFee: detail.registrationFee ?? "", websiteUrl: detail.websiteUrl ?? "", cfpUrl: detail.cfpUrl ?? "", abstractDeadlineStr: detail.abstractDeadline ? new Date(detail.abstractDeadline).toISOString().slice(0, 10) : "", paperDeadlineStr: detail.paperDeadline ? new Date(detail.paperDeadline).toISOString().slice(0, 10) : "", registrationDeadlineStr: detail.registrationDeadline ? new Date(detail.registrationDeadline).toISOString().slice(0, 10) : "", additionalInfo: detail.additionalInfo ?? "" }); setEditOpen(true); }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                          onClick={() => { if (confirm("Delete this conference?")) deleteMutation.mutate({ id: detail.id }); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </DialogHeader>
@@ -370,6 +389,88 @@ export default function Congresses() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-serif">Edit Conference</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Conference Name *</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Acronym</Label>
+                <Input value={editForm.acronym} onChange={(e) => setEditForm({ ...editForm, acronym: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Topic / Area</Label>
+                <Input value={editForm.topic} onChange={(e) => setEditForm({ ...editForm, topic: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Modality</Label>
+                <Select value={editForm.modality} onValueChange={(v: any) => setEditForm({ ...editForm, modality: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{MODALITIES.map((m) => <SelectItem key={m} value={m}>{MODALITY_LABELS[m]}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Start Date</Label>
+                <Input type="date" value={editForm.startDateStr} onChange={(e) => setEditForm({ ...editForm, startDateStr: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>End Date</Label>
+                <Input type="date" value={editForm.endDateStr} onChange={(e) => setEditForm({ ...editForm, endDateStr: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Abstract Deadline</Label>
+                <Input type="date" value={editForm.abstractDeadlineStr} onChange={(e) => setEditForm({ ...editForm, abstractDeadlineStr: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Paper Deadline</Label>
+                <Input type="date" value={editForm.paperDeadlineStr} onChange={(e) => setEditForm({ ...editForm, paperDeadlineStr: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Registration Deadline</Label>
+                <Input type="date" value={editForm.registrationDeadlineStr} onChange={(e) => setEditForm({ ...editForm, registrationDeadlineStr: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Registration Fee</Label>
+                <Input value={editForm.registrationFee} onChange={(e) => setEditForm({ ...editForm, registrationFee: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Location</Label>
+                <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Country</Label>
+                <Input value={editForm.country} onChange={(e) => setEditForm({ ...editForm, country: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Website URL</Label>
+                <Input value={editForm.websiteUrl} onChange={(e) => setEditForm({ ...editForm, websiteUrl: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>CFP URL</Label>
+                <Input value={editForm.cfpUrl} onChange={(e) => setEditForm({ ...editForm, cfpUrl: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Description</Label>
+                <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Additional Info</Label>
+                <Textarea value={editForm.additionalInfo} onChange={(e) => setEditForm({ ...editForm, additionalInfo: e.target.value })} rows={2} />
+              </div>
+            </div>
+            <Button className="w-full" disabled={!editForm.name || updateMutation.isPending}
+              onClick={() => selectedId && updateMutation.mutate({ id: selectedId, name: editForm.name, acronym: editForm.acronym || undefined, description: editForm.description || undefined, topic: editForm.topic || undefined, startDate: editForm.startDateStr ? new Date(editForm.startDateStr) : undefined, endDate: editForm.endDateStr ? new Date(editForm.endDateStr) : undefined, location: editForm.location || undefined, country: editForm.country || undefined, modality: editForm.modality, registrationFee: editForm.registrationFee || undefined, websiteUrl: editForm.websiteUrl || undefined, cfpUrl: editForm.cfpUrl || undefined, abstractDeadline: editForm.abstractDeadlineStr ? new Date(editForm.abstractDeadlineStr) : undefined, paperDeadline: editForm.paperDeadlineStr ? new Date(editForm.paperDeadlineStr) : undefined, registrationDeadline: editForm.registrationDeadlineStr ? new Date(editForm.registrationDeadlineStr) : undefined, additionalInfo: editForm.additionalInfo || undefined })}>
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

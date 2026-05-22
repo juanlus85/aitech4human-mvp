@@ -28,6 +28,9 @@ import {
   getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
   getAnnouncementAttachments,
   getAllLinks, createLink, deleteLink, updateLink,
+  getCommProposalAttendance, upsertCommProposalAttendance, removeCommProposalAttendance,
+  getAllProjectProposals, getProjectProposalById, createProjectProposal, updateProjectProposal, deleteProjectProposal,
+  getProjectProposalInterests, toggleProjectProposalInterest,
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
@@ -546,11 +549,22 @@ const congressesRouter = router({
     }))
     .mutation(({ input, ctx }) => createCommProposal({ ...input, proposerId: ctx.user.id })),
 
-  toggleProposalInterest: protectedProcedure
+    toggleProposalInterest: protectedProcedure
     .input(z.object({ communicationId: z.number() }))
     .mutation(({ input, ctx }) => toggleCommProposalInterest(input.communicationId, ctx.user.id)),
+  getProposalAttendance: protectedProcedure
+    .input(z.object({ communicationId: z.number() }))
+    .query(({ input }) => getCommProposalAttendance(input.communicationId)),
+  respondProposalAttendance: protectedProcedure
+    .input(z.object({
+      communicationId: z.number(),
+      response: z.enum(["attending", "maybe", "not_attending"]),
+    }))
+    .mutation(({ input, ctx }) => upsertCommProposalAttendance(input.communicationId, ctx.user.id, input.response)),
+  removeProposalAttendance: protectedProcedure
+    .input(z.object({ communicationId: z.number() }))
+    .mutation(({ input, ctx }) => removeCommProposalAttendance(input.communicationId, ctx.user.id)),
 });
-
 // ─── Papers Router ────────────────────────────────────────────────────────────
 
 const papersRouter = router({
@@ -1081,6 +1095,66 @@ const linksRouter = router({
     }),
 });
 
+// ─── Project Proposals Router ─────────────────────────────────────────────────────────────
+const projectProposalsRouter = router({
+  list: protectedProcedure.query(() => getAllProjectProposals()),
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(({ input }) => getProjectProposalById(input.id)),
+  create: protectedProcedure
+    .input(z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      objectives: z.string().optional(),
+      methodology: z.string().optional(),
+      expectedOutcomes: z.string().optional(),
+      fundingSource: z.string().optional(),
+      budget: z.string().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
+      status: z.enum(["idea","draft","submitted","approved","rejected","active","completed"]).default("idea"),
+      keywords: z.string().optional(),
+      additionalInfo: z.string().optional(),
+    }))
+    .mutation(({ input, ctx }) => createProjectProposal({ ...input, creatorId: ctx.user.id })),
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().min(1).optional(),
+      description: z.string().optional(),
+      objectives: z.string().optional(),
+      methodology: z.string().optional(),
+      expectedOutcomes: z.string().optional(),
+      fundingSource: z.string().optional(),
+      budget: z.string().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
+      status: z.enum(["idea","draft","submitted","approved","rejected","active","completed"]).optional(),
+      keywords: z.string().optional(),
+      additionalInfo: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const p = await getProjectProposalById(input.id);
+      if (!p) throw new TRPCError({ code: "NOT_FOUND" });
+      if (p.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { id, ...data } = input;
+      return updateProjectProposal(id, data);
+    }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const p = await getProjectProposalById(input.id);
+      if (!p) throw new TRPCError({ code: "NOT_FOUND" });
+      if (p.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return deleteProjectProposal(input.id);
+    }),
+  getInterests: protectedProcedure
+    .input(z.object({ proposalId: z.number() }))
+    .query(({ input }) => getProjectProposalInterests(input.proposalId)),
+  toggleInterest: protectedProcedure
+    .input(z.object({ proposalId: z.number() }))
+    .mutation(({ input, ctx }) => toggleProjectProposalInterest(input.proposalId, ctx.user.id)),
+});
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -1099,5 +1173,6 @@ export const appRouter = router({
   announcements: announcementsRouter,
   settings: settingsRouter,
   links: linksRouter,
+  projectProposals: projectProposalsRouter,
 });
 export type AppRouter = typeof appRouter;

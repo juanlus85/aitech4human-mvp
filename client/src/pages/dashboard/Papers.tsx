@@ -147,7 +147,7 @@ export default function Papers() {
     <DashboardLayout>
       <div className="max-w-5xl space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-2xl font-semibold text-foreground">Papers</h1>
+          <h1 className="font-serif text-2xl font-semibold text-foreground">Paper Proposals</h1>
           <Button className="gap-2 font-medium" onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4" />Add Paper
           </Button>

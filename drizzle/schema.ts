@@ -394,3 +394,44 @@ export const links = mysqlTable("links", {
 });
 export type Link = typeof links.$inferSelect;
 export type InsertLink = typeof links.$inferInsert;
+
+// ─── Comm Proposal Attendance ─────────────────────────────────────────────────
+export const commProposalAttendance = mysqlTable("commProposalAttendance", {
+  id: int("id").autoincrement().primaryKey(),
+  communicationId: int("communicationId").notNull().references(() => commProposals.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  response: mysqlEnum("response", ["attending", "maybe", "not_attending"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CommProposalAttendance = typeof commProposalAttendance.$inferSelect;
+
+// ─── Project Proposals ────────────────────────────────────────────────────────
+export const projectProposals = mysqlTable("projectProposals", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id),
+  title: varchar("title", { length: 512 }).notNull(),
+  description: text("description"),
+  objectives: text("objectives"),
+  methodology: text("methodology"),
+  expectedOutcomes: text("expectedOutcomes"),
+  fundingSource: varchar("fundingSource", { length: 255 }),
+  budget: varchar("budget", { length: 128 }),
+  startDate: datetime("startDate"),
+  endDate: datetime("endDate"),
+  status: mysqlEnum("status", ["idea", "draft", "submitted", "approved", "rejected", "active", "completed"]).default("idea").notNull(),
+  keywords: text("keywords"),
+  additionalInfo: text("additionalInfo"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ProjectProposal = typeof projectProposals.$inferSelect;
+export type InsertProjectProposal = typeof projectProposals.$inferInsert;
+
+export const projectProposalInterests = mysqlTable("projectProposalInterests", {
+  id: int("id").autoincrement().primaryKey(),
+  proposalId: int("proposalId").notNull().references(() => projectProposals.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ProjectProposalInterest = typeof projectProposalInterests.$inferSelect;

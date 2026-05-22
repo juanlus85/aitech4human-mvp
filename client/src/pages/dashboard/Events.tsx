@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, Globe, CalendarDays, MapPin, Trash2, ChevronRight, Star, Video } from "lucide-react";
+import { Plus, Globe, CalendarDays, MapPin, Trash2, ChevronRight, Star, Video, Pencil } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -33,6 +33,8 @@ export default function Events() {
   };
   const [form, setForm] = useState(emptyForm);
   const [notifyEmail, setNotifyEmail] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", description: "", topic: "", eventDateStr: "", endDateStr: "", location: "", modality: "in-person" as "in-person" | "online" | "hybrid", websiteUrl: "" });
 
   const { data: events, isLoading } = trpc.events.list.useQuery();
   const { data: detail } = trpc.events.getById.useQuery({ id: selected?.id ?? 0 }, { enabled: !!selected?.id });
@@ -55,6 +57,16 @@ export default function Events() {
 
   const deleteMutation = trpc.events.delete.useMutation({
     onSuccess: () => { utils.events.list.invalidate(); setSelected(null); toast.success("Event deleted."); },
+  });
+
+  const updateMutation = trpc.events.update.useMutation({
+    onSuccess: () => {
+      utils.events.list.invalidate();
+      if (selected?.id) utils.events.getById.invalidate({ id: selected.id });
+      setEditOpen(false);
+      toast.success("Event updated.");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const isInterested = detail?.interests?.some((i: any) => i.userId === user?.id);
@@ -187,10 +199,16 @@ export default function Events() {
                   <div className="flex items-start justify-between gap-2">
                     <DialogTitle className="font-serif text-xl flex-1">{detail.title}</DialogTitle>
                     {(detail.creatorId === user?.id || user?.role === "admin") && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0"
-                        onClick={() => { if (confirm("Delete this event?")) deleteMutation.mutate({ id: detail.id }); }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => { setEditForm({ title: detail.title, description: detail.description ?? "", topic: detail.topic ?? "", eventDateStr: detail.eventDate ? new Date(detail.eventDate).toISOString().slice(0, 16) : "", endDateStr: detail.endDate ? new Date(detail.endDate).toISOString().slice(0, 16) : "", location: detail.location ?? "", modality: (detail.modality ?? "in-person") as any, websiteUrl: detail.websiteUrl ?? "" }); setEditOpen(true); }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                          onClick={() => { if (confirm("Delete this event?")) deleteMutation.mutate({ id: detail.id }); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </DialogHeader>
@@ -256,6 +274,60 @@ export default function Events() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-serif">Edit Event</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Title *</Label>
+              <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Topic / Area</Label>
+              <Input value={editForm.topic} onChange={(e) => setEditForm({ ...editForm, topic: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Start Date</Label>
+                <Input type="datetime-local" value={editForm.eventDateStr} onChange={(e) => setEditForm({ ...editForm, eventDateStr: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>End Date</Label>
+                <Input type="datetime-local" value={editForm.endDateStr} onChange={(e) => setEditForm({ ...editForm, endDateStr: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Modality</Label>
+              <Select value={editForm.modality} onValueChange={(v: any) => setEditForm({ ...editForm, modality: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in-person">In Person</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Location</Label>
+              <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Website URL</Label>
+              <Input value={editForm.websiteUrl} onChange={(e) => setEditForm({ ...editForm, websiteUrl: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} />
+            </div>
+            <Button className="w-full" disabled={!editForm.title || updateMutation.isPending}
+              onClick={() => selected?.id && updateMutation.mutate({ id: selected.id, title: editForm.title, description: editForm.description || undefined, topic: editForm.topic || undefined, eventDate: editForm.eventDateStr ? new Date(editForm.eventDateStr) : undefined, endDate: editForm.endDateStr ? new Date(editForm.endDateStr) : undefined, location: editForm.location || undefined, modality: editForm.modality, websiteUrl: editForm.websiteUrl || undefined })}>
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

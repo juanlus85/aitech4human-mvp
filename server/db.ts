@@ -4,7 +4,7 @@ import mysql from "mysql2";
 import {
   users, profiles, news, messages, messageAttachments,
   meetings, meetingAttendance, meetingDateOptions, meetingDateVotes,
-  congresses, commProposals, commProposalInterests,
+  congresses, commProposals, commProposalInterests, commProposalAttendance,
   papers, paperContributors,
   events, eventInterests,
   documents, documentFolders,
@@ -12,6 +12,7 @@ import {
   announcements, announcementReplies, announcementAttachments,
   appSettings,
   links,
+  projectProposals, projectProposalInterests,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -855,4 +856,133 @@ export async function updateLink(id: number, data: { title?: string; url?: strin
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   return db.update(links).set({ ...data, updatedAt: new Date() }).where(eq(links.id, id));
+}
+// ─── Comm Proposal Attendance ─────────────────────────────────────────────────
+export async function getCommProposalAttendance(communicationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: commProposalAttendance.id,
+    communicationId: commProposalAttendance.communicationId,
+    userId: commProposalAttendance.userId,
+    response: commProposalAttendance.response,
+    userName: users.name,
+  }).from(commProposalAttendance)
+    .leftJoin(users, eq(commProposalAttendance.userId, users.id))
+    .where(eq(commProposalAttendance.communicationId, communicationId));
+}
+export async function upsertCommProposalAttendance(communicationId: number, userId: number, response: "attending" | "maybe" | "not_attending") {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const existing = await db.select({ id: commProposalAttendance.id })
+    .from(commProposalAttendance)
+    .where(and(eq(commProposalAttendance.communicationId, communicationId), eq(commProposalAttendance.userId, userId)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(commProposalAttendance).set({ response }).where(and(eq(commProposalAttendance.communicationId, communicationId), eq(commProposalAttendance.userId, userId)));
+  } else {
+    await db.insert(commProposalAttendance).values({ communicationId, userId, response });
+  }
+  return { communicationId, userId, response };
+}
+export async function removeCommProposalAttendance(communicationId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(commProposalAttendance).where(and(eq(commProposalAttendance.communicationId, communicationId), eq(commProposalAttendance.userId, userId)));
+}
+// ─── Project Proposals ────────────────────────────────────────────────────────
+export async function getAllProjectProposals() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: projectProposals.id,
+    creatorId: projectProposals.creatorId,
+    title: projectProposals.title,
+    description: projectProposals.description,
+    objectives: projectProposals.objectives,
+    methodology: projectProposals.methodology,
+    expectedOutcomes: projectProposals.expectedOutcomes,
+    fundingSource: projectProposals.fundingSource,
+    budget: projectProposals.budget,
+    startDate: projectProposals.startDate,
+    endDate: projectProposals.endDate,
+    status: projectProposals.status,
+    keywords: projectProposals.keywords,
+    additionalInfo: projectProposals.additionalInfo,
+    createdAt: projectProposals.createdAt,
+    updatedAt: projectProposals.updatedAt,
+    creatorName: users.name,
+  }).from(projectProposals)
+    .leftJoin(users, eq(projectProposals.creatorId, users.id))
+    .orderBy(desc(projectProposals.createdAt));
+}
+export async function getProjectProposalById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const r = await db.select({
+    id: projectProposals.id,
+    creatorId: projectProposals.creatorId,
+    title: projectProposals.title,
+    description: projectProposals.description,
+    objectives: projectProposals.objectives,
+    methodology: projectProposals.methodology,
+    expectedOutcomes: projectProposals.expectedOutcomes,
+    fundingSource: projectProposals.fundingSource,
+    budget: projectProposals.budget,
+    startDate: projectProposals.startDate,
+    endDate: projectProposals.endDate,
+    status: projectProposals.status,
+    keywords: projectProposals.keywords,
+    additionalInfo: projectProposals.additionalInfo,
+    createdAt: projectProposals.createdAt,
+    updatedAt: projectProposals.updatedAt,
+    creatorName: users.name,
+  }).from(projectProposals)
+    .leftJoin(users, eq(projectProposals.creatorId, users.id))
+    .where(eq(projectProposals.id, id)).limit(1);
+  return r[0] ?? null;
+}
+export async function createProjectProposal(data: typeof projectProposals.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(projectProposals).values(sanitize(data));
+  const r = await db.select().from(projectProposals).orderBy(desc(projectProposals.createdAt)).limit(1);
+  return r[0];
+}
+export async function updateProjectProposal(id: number, data: Partial<typeof projectProposals.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(projectProposals).set(sanitize(data)).where(eq(projectProposals.id, id));
+}
+export async function deleteProjectProposal(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(projectProposals).where(eq(projectProposals.id, id));
+}
+export async function getProjectProposalInterests(proposalId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: projectProposalInterests.id,
+    proposalId: projectProposalInterests.proposalId,
+    userId: projectProposalInterests.userId,
+    userName: users.name,
+  }).from(projectProposalInterests)
+    .leftJoin(users, eq(projectProposalInterests.userId, users.id))
+    .where(eq(projectProposalInterests.proposalId, proposalId));
+}
+export async function toggleProjectProposalInterest(proposalId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const existing = await db.select({ id: projectProposalInterests.id })
+    .from(projectProposalInterests)
+    .where(and(eq(projectProposalInterests.proposalId, proposalId), eq(projectProposalInterests.userId, userId)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.delete(projectProposalInterests).where(and(eq(projectProposalInterests.proposalId, proposalId), eq(projectProposalInterests.userId, userId)));
+    return { interested: false };
+  } else {
+    await db.insert(projectProposalInterests).values({ proposalId, userId });
+    return { interested: true };
+  }
 }
