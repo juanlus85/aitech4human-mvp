@@ -77,7 +77,7 @@ export default function Calendar() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-serif text-2xl font-semibold text-foreground">Calendar</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Meetings, congresses, events and deadlines</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Meetings, conferences, events and deadlines</p>
           </div>
           <div className="flex items-center gap-2">
             {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (

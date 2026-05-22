@@ -110,10 +110,10 @@
 
 ## Round 10 — Bug Fixes & New Features
 
-- [ ] Fix Announcements INSERT error (FK constraint on authorId)
-- [ ] Fix Member #N display — show real name in interest/attendance lists
-- [ ] Rename "Congresses" to "Conferences" throughout the app
-- [ ] Create admin Settings page: SMTP configuration (host, port, user, password, from)
-- [ ] Create admin Settings page: OpenAI API key configuration
-- [ ] Store SMTP/OpenAI settings in DB (appSettings table)
-- [ ] Version indicator in Settings page footer
+- [x] Fix Announcements INSERT error (FK constraint on authorId)
+- [x] Fix Member #N display — show real name in interest/attendance lists
+- [x] Rename "Congresses" to "Conferences" throughout the app
+- [x] Create admin Settings page: SMTP configuration (host, port, user, password, from)
+- [x] Create admin Settings page: OpenAI API key configuration
+- [x] Store SMTP/OpenAI settings in DB (appSettings table)
+- [x] Version indicator in Settings page footer
