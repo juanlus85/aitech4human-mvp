@@ -95,15 +95,15 @@
 
 ## Round 9 — New features & fixes
 
-- [ ] Update logo with new transparent PNG in header, sidebar, and favicon
-- [ ] Remove "News" from public navigation menu
-- [ ] Create Announcements module: DB tables (announcements, announcementReplies, announcementAttachments)
-- [ ] Create Announcements module: tRPC procedures (list, getById, create, reply, delete)
-- [ ] Create Announcements module: UI page with forum-style thread view, file attachments
-- [ ] Add "Announcements" to dashboard sidebar navigation
-- [ ] Add "Notify by email" checkbox (unchecked by default) to Events creation form
-- [ ] Add "Notify by email" checkbox (unchecked by default) to Congresses creation form
-- [ ] Add "Notify by email" checkbox (unchecked by default) to Papers creation form
-- [ ] Add "Notify by email" checkbox (unchecked by default) to Announcements creation form
-- [ ] Fix Contact form: show clear message that SMTP is not configured
-- [ ] Fix AI Assistant: show clear message that OpenAI API key is not configured
+- [x] Update logo with new transparent PNG in header, sidebar, and favicon
+- [x] Remove "News" from public navigation menu
+- [x] Create Announcements module: DB tables (announcements, announcementReplies, announcementAttachments)
+- [x] Create Announcements module: tRPC procedures (list, getById, create, reply, delete)
+- [x] Create Announcements module: UI page with forum-style thread view, threaded replies
+- [x] Add "Announcements" to dashboard sidebar navigation
+- [x] Add "Notify by email" checkbox (unchecked by default) to Events creation form
+- [x] Add "Notify by email" checkbox (unchecked by default) to Congresses creation form
+- [x] Add "Notify by email" checkbox (unchecked by default) to Papers creation form
+- [x] Add "Notify by email" checkbox (unchecked by default) to Announcements creation form
+- [x] Fix Contact form: show clear message that SMTP is not configured
+- [x] Fix AI Assistant: show clear message that OpenAI API key is not configured
