@@ -231,7 +231,7 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 py-1 overflow-y-auto">
+          <SidebarContent className="gap-0 py-1">
             <NavGroup items={mainNav} />
             <NavGroup items={collaborationNav} label="Collaboration" />
             <NavGroup items={resourcesNav} label="Resources" />
