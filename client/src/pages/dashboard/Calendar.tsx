@@ -1,15 +1,16 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isWithinInterval, startOfDay } from "date-fns";
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, Users, BookOpen, FileText, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Users, BookOpen, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type CalendarEvent = {
   id: string;
   title: string;
   date: Date;
+  endDate?: Date;
   type: "meeting" | "congress" | "event" | "deadline";
   color: string;
 };
@@ -39,7 +40,14 @@ export default function Calendar() {
 
     congresses?.forEach((c) => {
       if (c.startDate) {
-        items.push({ id: `congress-${c.id}`, title: c.name, date: new Date(c.startDate), type: "congress", color: TYPE_CONFIG.congress.color });
+        items.push({
+          id: `congress-${c.id}`,
+          title: c.name,
+          date: new Date(c.startDate),
+          endDate: c.endDate ? new Date(c.endDate) : undefined,
+          type: "congress",
+          color: TYPE_CONFIG.congress.color,
+        });
       }
       if (c.abstractDeadline) {
         items.push({ id: `deadline-${c.id}`, title: `Abstract deadline: ${c.name}`, date: new Date(c.abstractDeadline), type: "deadline", color: TYPE_CONFIG.deadline.color });
@@ -48,7 +56,14 @@ export default function Calendar() {
 
     events?.forEach((e) => {
       if (e.eventDate) {
-        items.push({ id: `event-${e.id}`, title: e.title, date: new Date(e.eventDate), type: "event", color: TYPE_CONFIG.event.color });
+        items.push({
+          id: `event-${e.id}`,
+          title: e.title,
+          date: new Date(e.eventDate),
+          endDate: e.endDate ? new Date(e.endDate) : undefined,
+          type: "event",
+          color: TYPE_CONFIG.event.color,
+        });
       }
     });
 
@@ -63,10 +78,19 @@ export default function Calendar() {
   const startDow = (monthStart.getDay() + 6) % 7; // 0=Mon
   const paddedDays: (Date | null)[] = [...Array(startDow).fill(null), ...days];
 
-  const eventsForDay = (day: Date) => calendarEvents.filter((e) => isSameDay(e.date, day));
+  const eventsForDay = (day: Date) =>
+    calendarEvents.filter((e) => {
+      const start = startOfDay(e.date);
+      const end = e.endDate ? startOfDay(e.endDate) : start;
+      const d = startOfDay(day);
+      return d >= start && d <= end;
+    });
 
   const upcomingEvents = calendarEvents
-    .filter((e) => e.date >= new Date())
+    .filter((e) => {
+      const end = e.endDate ? startOfDay(e.endDate) : startOfDay(e.date);
+      return end >= startOfDay(new Date());
+    })
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .slice(0, 8);
 
@@ -74,12 +98,12 @@ export default function Calendar() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="font-serif text-2xl font-semibold text-foreground">Calendar</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Meetings, conferences, events and deadlines</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
               <Badge key={key} variant="secondary" className="gap-1.5 text-xs">
                 <span className={`w-2 h-2 rounded-full ${cfg.color}`} />
@@ -165,7 +189,10 @@ export default function Calendar() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-foreground leading-tight truncate">{ev.title}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{format(ev.date, "MMM d, yyyy")}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {format(ev.date, "MMM d")}
+                          {ev.endDate && !isSameDay(ev.date, ev.endDate) ? ` – ${format(ev.endDate, "MMM d, yyyy")}` : `, ${format(ev.date, "yyyy")}`}
+                        </p>
                       </div>
                     </div>
                   );

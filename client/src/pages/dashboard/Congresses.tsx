@@ -82,6 +82,19 @@ export default function Congresses() {
     onError: (e) => toast.error(e.message),
   });
 
+  const { data: congressAttendanceData } = trpc.congresses.getCongressAttendance.useQuery(
+    { congressId: selectedId! },
+    { enabled: !!selectedId }
+  );
+  const respondCongressAttendanceMutation = trpc.congresses.respondCongressAttendance.useMutation({
+    onSuccess: () => { if (selectedId) utils.congresses.getCongressAttendance.invalidate({ congressId: selectedId }); },
+    onError: (e) => toast.error(e.message),
+  });
+  const removeCongressAttendanceMutation = trpc.congresses.removeCongressAttendance.useMutation({
+    onSuccess: () => { if (selectedId) utils.congresses.getCongressAttendance.invalidate({ congressId: selectedId }); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const { data: proposalAttendance } = trpc.congresses.getProposalAttendance.useQuery(
     { communicationId: selectedProposalId! },
     { enabled: !!selectedProposalId }
@@ -340,6 +353,52 @@ export default function Congresses() {
 
                   {detail.description && <p className="text-sm text-muted-foreground leading-relaxed">{detail.description}</p>}
                   {detail.additionalInfo && <p className="text-sm text-muted-foreground italic">{detail.additionalInfo}</p>}
+
+                  {/* Congress-level attendance */}
+                  {(() => {
+                    const myCongressAttendance = congressAttendanceData?.find((a: any) => a.userId === user?.id)?.response ?? null;
+                    const attendingCount = congressAttendanceData?.filter((a: any) => a.response === "attending").length ?? 0;
+                    return (
+                      <div className="border border-border/50 rounded-lg p-3 space-y-2 bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Will you attend this conference?</p>
+                          {attendingCount > 0 && <span className="text-xs text-muted-foreground">{attendingCount} attending</span>}
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {(["attending", "maybe", "not_attending"] as const).map((r) => (
+                            <Button
+                              key={r}
+                              size="sm"
+                              variant={myCongressAttendance === r ? "default" : "outline"}
+                              className={`h-7 text-xs gap-1 ${myCongressAttendance === r ? "" : "bg-white/60"}`}
+                              onClick={() => {
+                                if (myCongressAttendance === r) {
+                                  removeCongressAttendanceMutation.mutate({ congressId: detail.id });
+                                } else {
+                                  respondCongressAttendanceMutation.mutate({ congressId: detail.id, response: r });
+                                }
+                              }}
+                              disabled={respondCongressAttendanceMutation.isPending || removeCongressAttendanceMutation.isPending}
+                            >
+                              {r === "attending" ? "✓ Will attend" : r === "maybe" ? "? Not sure" : "✗ Cannot attend"}
+                            </Button>
+                          ))}
+                        </div>
+                        {congressAttendanceData && congressAttendanceData.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {congressAttendanceData.map((a: any) => (
+                              <span key={a.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                                a.response === "attending" ? "bg-emerald-50 text-emerald-700" :
+                                a.response === "maybe" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
+                              }`}>
+                                {a.userName ?? "Member"} · {a.response === "attending" ? "attending" : a.response === "maybe" ? "not sure" : "cannot attend"}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Communication proposals */}
                   <div className="space-y-3">

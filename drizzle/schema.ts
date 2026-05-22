@@ -435,3 +435,14 @@ export const projectProposalInterests = mysqlTable("projectProposalInterests", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ProjectProposalInterest = typeof projectProposalInterests.$inferSelect;
+
+// ─── Congress Attendance ──────────────────────────────────────────────────────
+export const congressAttendance = mysqlTable("congressAttendance", {
+  id: int("id").autoincrement().primaryKey(),
+  congressId: int("congressId").notNull().references(() => congresses.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  response: mysqlEnum("response", ["attending", "maybe", "not_attending"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CongressAttendance = typeof congressAttendance.$inferSelect;

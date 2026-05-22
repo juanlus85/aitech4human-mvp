@@ -29,6 +29,7 @@ import {
   getAnnouncementAttachments,
   getAllLinks, createLink, deleteLink, updateLink,
   getCommProposalAttendance, upsertCommProposalAttendance, removeCommProposalAttendance,
+  getCongressAttendance, upsertCongressAttendance, removeCongressAttendance,
   getAllProjectProposals, getProjectProposalById, createProjectProposal, updateProjectProposal, deleteProjectProposal,
   getProjectProposalInterests, toggleProjectProposalInterest,
 } from "./db";
@@ -564,6 +565,18 @@ const congressesRouter = router({
   removeProposalAttendance: protectedProcedure
     .input(z.object({ communicationId: z.number() }))
     .mutation(({ input, ctx }) => removeCommProposalAttendance(input.communicationId, ctx.user.id)),
+  getCongressAttendance: protectedProcedure
+    .input(z.object({ congressId: z.number() }))
+    .query(({ input }) => getCongressAttendance(input.congressId)),
+  respondCongressAttendance: protectedProcedure
+    .input(z.object({
+      congressId: z.number(),
+      response: z.enum(["attending", "maybe", "not_attending"]),
+    }))
+    .mutation(({ input, ctx }) => upsertCongressAttendance(input.congressId, ctx.user.id, input.response)),
+  removeCongressAttendance: protectedProcedure
+    .input(z.object({ congressId: z.number() }))
+    .mutation(({ input, ctx }) => removeCongressAttendance(input.congressId, ctx.user.id)),
 });
 // ─── Papers Router ────────────────────────────────────────────────────────────
 

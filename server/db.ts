@@ -13,6 +13,7 @@ import {
   appSettings,
   links,
   projectProposals, projectProposalInterests,
+  congressAttendance,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -985,4 +986,40 @@ export async function toggleProjectProposalInterest(proposalId: number, userId: 
     await db.insert(projectProposalInterests).values({ proposalId, userId });
     return { interested: true };
   }
+}
+
+// ─── Congress Attendance ──────────────────────────────────────────────────────
+export async function getCongressAttendance(congressId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: congressAttendance.id,
+    congressId: congressAttendance.congressId,
+    userId: congressAttendance.userId,
+    response: congressAttendance.response,
+    userName: users.name,
+  }).from(congressAttendance)
+    .leftJoin(users, eq(congressAttendance.userId, users.id))
+    .where(eq(congressAttendance.congressId, congressId));
+}
+
+export async function upsertCongressAttendance(congressId: number, userId: number, response: "attending" | "maybe" | "not_attending") {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const existing = await db.select({ id: congressAttendance.id })
+    .from(congressAttendance)
+    .where(and(eq(congressAttendance.congressId, congressId), eq(congressAttendance.userId, userId)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(congressAttendance).set({ response }).where(and(eq(congressAttendance.congressId, congressId), eq(congressAttendance.userId, userId)));
+  } else {
+    await db.insert(congressAttendance).values({ congressId, userId, response });
+  }
+  return { congressId, userId, response };
+}
+
+export async function removeCongressAttendance(congressId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(congressAttendance).where(and(eq(congressAttendance.congressId, congressId), eq(congressAttendance.userId, userId)));
 }
