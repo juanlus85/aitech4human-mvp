@@ -1,6 +1,7 @@
 import {
   boolean,
   int,
+  tinyint,
   mysqlEnum,
   mysqlTable,
   text,
@@ -212,10 +213,10 @@ export const commProposalInterests = mysqlTable("commProposalInterests", {
 
 export const announcements = mysqlTable("announcements", {
   id: int("id").autoincrement().primaryKey(),
-  authorId: int("authorId").notNull().references(() => users.id),
+  authorId: int("authorId").notNull(),
   subject: varchar("subject", { length: 512 }).notNull(),
   body: text("body").notNull(),
-  isPinned: boolean("isPinned").default(false).notNull(),
+  isPinned: tinyint("isPinned").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -225,8 +226,8 @@ export type InsertAnnouncement = typeof announcements.$inferInsert;
 
 export const announcementReplies = mysqlTable("announcementReplies", {
   id: int("id").autoincrement().primaryKey(),
-  announcementId: int("announcementId").notNull().references(() => announcements.id, { onDelete: "cascade" }),
-  authorId: int("authorId").notNull().references(() => users.id),
+  announcementId: int("announcementId").notNull(),
+  authorId: int("authorId").notNull(),
   body: text("body").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -236,8 +237,8 @@ export type AnnouncementReply = typeof announcementReplies.$inferSelect;
 
 export const announcementAttachments = mysqlTable("announcementAttachments", {
   id: int("id").autoincrement().primaryKey(),
-  announcementId: int("announcementId").references(() => announcements.id, { onDelete: "cascade" }),
-  replyId: int("replyId").references(() => announcementReplies.id, { onDelete: "cascade" }),
+  announcementId: int("announcementId"),
+  replyId: int("replyId"),
   fileName: varchar("fileName", { length: 512 }).notNull(),
   fileKey: text("fileKey").notNull(),
   fileUrl: text("fileUrl").notNull(),
@@ -369,3 +370,13 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── App Settings ─────────────────────────────────────────────────────────────
+
+export const appSettings = mysqlTable("appSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  settingKey: varchar("settingKey", { length: 128 }).notNull(),
+  settingValue: text("settingValue"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type AppSetting = typeof appSettings.$inferSelect;

@@ -66,7 +66,7 @@ const collaborationNav = [
   { icon: MessageSquare, label: "Messages", path: "/dashboard/messages" },
   { icon: Megaphone, label: "Announcements", path: "/dashboard/announcements" },
   { icon: CalendarDays, label: "Meetings", path: "/dashboard/meetings" },
-  { icon: Trophy, label: "Congresses", path: "/dashboard/congresses" },
+  { icon: Trophy, label: "Conferences", path: "/dashboard/congresses" },
   { icon: BookOpen, label: "Papers", path: "/dashboard/papers" },
   { icon: Globe, label: "Events", path: "/dashboard/events" },
 ];
@@ -79,6 +79,7 @@ const resourcesNav = [
 
 const adminNav = [
   { icon: Users, label: "Users", path: "/dashboard/admin/users" },
+  { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -46,7 +46,7 @@ export default function Congresses() {
       utils.congresses.list.invalidate();
       setCreateOpen(false);
       setForm(emptyForm);
-      toast.success("Congress added.");
+      toast.success("Conference added.");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -55,7 +55,7 @@ export default function Congresses() {
     onSuccess: () => {
       utils.congresses.list.invalidate();
       setSelectedId(null);
-      toast.success("Congress deleted.");
+      toast.success("Conference deleted.");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -104,9 +104,9 @@ export default function Congresses() {
     <DashboardLayout>
       <div className="max-w-5xl space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-2xl font-semibold text-foreground">Congresses</h1>
+          <h1 className="font-serif text-2xl font-semibold text-foreground">Conferences</h1>
           <Button className="gap-2 font-medium" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4" />Add Congress
+            <Plus className="w-4 h-4" />Add Conference
           </Button>
         </div>
 
@@ -115,7 +115,7 @@ export default function Congresses() {
         ) : congresses?.length === 0 ? (
           <div className="glass-card rounded-xl p-12 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No congresses registered yet.</p>
+            <p className="text-muted-foreground">No conferences registered yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -156,11 +156,11 @@ export default function Congresses() {
         {/* Create dialog */}
         <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setForm(emptyForm); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle className="font-serif">Add Congress</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="font-serif">Add Conference</DialogTitle></DialogHeader>
               <div className="space-y-4 mt-2">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5 col-span-2">
-                  <Label>Congress Name *</Label>
+                  <Label>Conference Name *</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
@@ -238,7 +238,7 @@ export default function Congresses() {
                 </Label>
               </div>
               <Button className="w-full" onClick={handleCreate} disabled={!form.name || createMutation.isPending}>
-                {createMutation.isPending ? "Saving..." : "Add Congress"}
+                {createMutation.isPending ? "Saving..." : "Add Conference"}
               </Button>
             </div>
           </DialogContent>
@@ -254,7 +254,7 @@ export default function Congresses() {
                     <DialogTitle className="font-serif text-xl flex-1">{detail.name}</DialogTitle>
                     {canDelete && (
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0"
-                        onClick={() => { if (confirm("Delete this congress?")) deleteMutation.mutate({ id: detail.id }); }}>
+                        onClick={() => { if (confirm("Delete this conference?")) deleteMutation.mutate({ id: detail.id }); }}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     )}

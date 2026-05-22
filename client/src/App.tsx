@@ -20,6 +20,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/dashboard/Profile";
 import Messages from "./pages/dashboard/Messages";
 import Announcements from "./pages/dashboard/Announcements";
+import Settings from "./pages/dashboard/Settings";
 import Meetings from "./pages/dashboard/Meetings";
 import Congresses from "./pages/dashboard/Congresses";
 import Papers from "./pages/dashboard/Papers";
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/dashboard/calendar" component={Calendar} />
 
       {/* Admin */}
+      <Route path="/dashboard/settings" component={Settings} />
       <Route path="/dashboard/admin/users" component={AdminUsers} />
       <Route path="/dashboard/admin/news" component={AdminNews} />
 

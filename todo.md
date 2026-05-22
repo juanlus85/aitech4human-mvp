@@ -107,3 +107,13 @@
 - [x] Add "Notify by email" checkbox (unchecked by default) to Announcements creation form
 - [x] Fix Contact form: show clear message that SMTP is not configured
 - [x] Fix AI Assistant: show clear message that OpenAI API key is not configured
+
+## Round 10 — Bug Fixes & New Features
+
+- [ ] Fix Announcements INSERT error (FK constraint on authorId)
+- [ ] Fix Member #N display — show real name in interest/attendance lists
+- [ ] Rename "Congresses" to "Conferences" throughout the app
+- [ ] Create admin Settings page: SMTP configuration (host, port, user, password, from)
+- [ ] Create admin Settings page: OpenAI API key configuration
+- [ ] Store SMTP/OpenAI settings in DB (appSettings table)
+- [ ] Version indicator in Settings page footer

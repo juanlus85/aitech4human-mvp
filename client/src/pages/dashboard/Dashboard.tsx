@@ -67,7 +67,7 @@ export default function Dashboard() {
           <StatCard icon={Bell} label="Notifications" value={unreadNotifications} href="/dashboard/notifications" color="bg-violet-100 text-violet-600" />
           <StatCard icon={CalendarDays} label="Meetings" value={meetings?.length ?? 0} href="/dashboard/meetings" color="bg-emerald-100 text-emerald-600" />
           <StatCard icon={BookOpen} label="Papers" value={papers?.length ?? 0} href="/dashboard/papers" color="bg-amber-100 text-amber-600" />
-          <StatCard icon={Trophy} label="Congresses" value={congresses?.length ?? 0} href="/dashboard/congresses" color="bg-rose-100 text-rose-600" />
+          <StatCard icon={Trophy} label="Conferences" value={congresses?.length ?? 0} href="/dashboard/congresses" color="bg-rose-100 text-rose-600" />
           <StatCard icon={KanbanSquare} label="Open Tasks" value={pendingTasks.length} href="/dashboard/tasks" color="bg-sky-100 text-sky-600" />
         </div>
 
@@ -168,7 +168,7 @@ export default function Dashboard() {
             <Link href="/dashboard/messages"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><MessageSquare className="w-3.5 h-3.5" />New Message</Button></Link>
             <Link href="/dashboard/meetings"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><CalendarDays className="w-3.5 h-3.5" />Schedule Meeting</Button></Link>
             <Link href="/dashboard/papers"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><BookOpen className="w-3.5 h-3.5" />Add Paper</Button></Link>
-            <Link href="/dashboard/congresses"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><Trophy className="w-3.5 h-3.5" />Add Congress</Button></Link>
+            <Link href="/dashboard/congresses"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><Trophy className="w-3.5 h-3.5" />Add Conference</Button></Link>
             <Link href="/dashboard/assistant"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><Sparkles className="w-3.5 h-3.5" />AI Assistant</Button></Link>
             {isAdmin && <Link href="/dashboard/admin/users"><Button variant="outline" size="sm" className="gap-1.5 bg-white/60"><Users className="w-3.5 h-3.5" />Manage Users</Button></Link>}
           </div>

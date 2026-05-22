@@ -16,7 +16,7 @@ type CalendarEvent = {
 
 const TYPE_CONFIG = {
   meeting: { color: "bg-violet-400", label: "Meeting", icon: Users },
-  congress: { color: "bg-rose-400", label: "Congress", icon: BookOpen },
+  congress: { color: "bg-rose-400", label: "Conference", icon: BookOpen },
   event: { color: "bg-emerald-400", label: "Event", icon: CalendarDays },
   deadline: { color: "bg-amber-400", label: "Deadline", icon: Clock },
 };

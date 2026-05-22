@@ -10,6 +10,7 @@ import {
   documents, documentFolders,
   tasks, notifications,
   announcements, announcementReplies, announcementAttachments,
+  appSettings,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -299,7 +300,17 @@ export async function deleteMeeting(id: number) {
 export async function getMeetingAttendance(meetingId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(meetingAttendance).where(eq(meetingAttendance.meetingId, meetingId));
+  return db
+    .select({
+      id: meetingAttendance.id,
+      meetingId: meetingAttendance.meetingId,
+      userId: meetingAttendance.userId,
+      response: meetingAttendance.response,
+      userName: users.name,
+    })
+    .from(meetingAttendance)
+    .leftJoin(users, eq(meetingAttendance.userId, users.id))
+    .where(eq(meetingAttendance.meetingId, meetingId));
 }
 
 export async function upsertAttendance(meetingId: number, userId: number, response: "attending" | "maybe" | "not_attending") {
@@ -396,7 +407,16 @@ export async function createCommProposal(data: typeof commProposals.$inferInsert
 export async function getCommProposalInterests(communicationId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(commProposalInterests).where(eq(commProposalInterests.communicationId, communicationId));
+  return db
+    .select({
+      id: commProposalInterests.id,
+      communicationId: commProposalInterests.communicationId,
+      userId: commProposalInterests.userId,
+      userName: users.name,
+    })
+    .from(commProposalInterests)
+    .leftJoin(users, eq(commProposalInterests.userId, users.id))
+    .where(eq(commProposalInterests.communicationId, communicationId));
 }
 
 export async function toggleCommProposalInterest(communicationId: number, userId: number) {
@@ -773,4 +793,24 @@ export async function getAnnouncementAttachments(announcementId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(announcementAttachments).where(eq(announcementAttachments.announcementId, announcementId));
+}
+
+// ─── App Settings ─────────────────────────────────────────────────────────────
+export async function getAppSettings(): Promise<Record<string, string>> {
+  const db = await getDb();
+  if (!db) return {};
+  const rows = await db.select().from(appSettings);
+  return Object.fromEntries(rows.map((r) => [r.settingKey, r.settingValue ?? ""]));
+}
+
+export async function upsertAppSetting(key: string, value: string) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select({ id: appSettings.id }).from(appSettings)
+    .where(eq(appSettings.settingKey, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(appSettings).set({ settingValue: value }).where(eq(appSettings.settingKey, key));
+  } else {
+    await db.insert(appSettings).values({ settingKey: key, settingValue: value });
+  }
 }

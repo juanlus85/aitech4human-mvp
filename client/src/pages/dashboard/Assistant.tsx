@@ -105,7 +105,7 @@ export default function Assistant() {
               <FileText className="w-3.5 h-3.5" />Meeting Summary
             </TabsTrigger>
             <TabsTrigger value="congress" className="gap-1.5 text-xs">
-              <Trophy className="w-3.5 h-3.5" />Congress Draft
+              <Trophy className="w-3.5 h-3.5" />Conference Draft
             </TabsTrigger>
           </TabsList>
 
@@ -207,13 +207,13 @@ export default function Assistant() {
           <TabsContent value="congress" className="space-y-4">
             <div className="glass-card rounded-xl p-5 space-y-4">
               <div>
-                <h2 className="font-serif font-semibold text-foreground mb-1">Draft Congress Description</h2>
+                <h2 className="font-serif font-semibold text-foreground mb-1">Draft Conference Description</h2>
                 <p className="text-sm text-muted-foreground">
                   Provide basic information about a congress or conference call for papers. The assistant will draft a professional description or proposal text.
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label>Congress Name</Label>
+                <Label>Conference Name</Label>
                 <Input value={congressName} onChange={(e) => setCongressName(e.target.value)} placeholder="e.g. International Conference on AI & Society" />
               </div>
               <div className="space-y-1.5">

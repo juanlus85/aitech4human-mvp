@@ -359,7 +359,7 @@ export default function Meetings() {
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Responses</p>
                           {detail.attendance.map((a: any) => (
                             <div key={a.id} className="flex items-center justify-between text-sm">
-                              <span className="text-foreground">Member #{a.userId}</span>
+                              <span className="text-foreground">{a.userName ?? `Member #${a.userId}`}</span>
                               <Badge variant="secondary" className="text-xs capitalize">{a.response.replace("_", " ")}</Badge>
                             </div>
                           ))}

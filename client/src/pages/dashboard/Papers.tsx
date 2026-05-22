@@ -404,7 +404,7 @@ export default function Papers() {
                     {detail.contributors?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {detail.contributors.map((c: any) => (
-                          <Badge key={c.id} variant="secondary" className="text-xs">Member #{c.userId}</Badge>
+                          <Badge key={c.id} variant="secondary" className="text-xs">{c.userName ?? `Member #${c.userId}`}</Badge>
                         ))}
                       </div>
                     )}

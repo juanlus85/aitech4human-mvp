@@ -11,6 +11,7 @@ import {
   getAttachmentsForMessage, createMessageAttachment,
   getAllMeetings, getMeetingById, createMeeting, updateMeeting, deleteMeeting,
   getMeetingAttendance, upsertAttendance, getMeetingDateOptions, createDateOption,
+  getAppSettings, upsertAppSetting,
   getVotesForOption, toggleDateVote,
   getAllCongresses, getCongressById, createCongress, updateCongress, deleteCongress,
   getCommProposalsForCongress, createCommProposal, getCommProposalInterests, toggleCommProposalInterest,
@@ -859,7 +860,7 @@ const announcementsRouter = router({
         authorId: ctx.user.id,
         subject: input.subject,
         body: input.body,
-        isPinned: input.isPinned ?? false,
+        isPinned: (input.isPinned ?? false) ? 1 : 0,
       });
     }),
 
@@ -874,7 +875,9 @@ const announcementsRouter = router({
       const ann = await getAnnouncementById(input.id);
       if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
       if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      const { id, ...data } = input;
+      const { id, isPinned: isPinnedBool, ...rest } = input;
+      const data: any = { ...rest };
+      if (isPinnedBool !== undefined) data.isPinned = isPinnedBool ? 1 : 0;
       await updateAnnouncement(id, data);
       return { success: true };
     }),
@@ -906,6 +909,31 @@ const announcementsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       await deleteAnnouncementReply(input.id);
+            return { success: true };
+    }),
+});
+
+// ─── Settings Router (admin only) ─────────────────────────────────────────────
+const settingsRouter = router({
+  get: protectedProcedure
+    .use(({ ctx, next }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return next({ ctx });
+    })
+    .query(async () => {
+      return getAppSettings();
+    }),
+  set: protectedProcedure
+    .use(({ ctx, next }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return next({ ctx });
+    })
+    .input(z.object({
+      key: z.string().min(1).max(128),
+      value: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      await upsertAppSetting(input.key, input.value);
       return { success: true };
     }),
 });
@@ -925,7 +953,7 @@ export const appRouter = router({
   tasks: tasksRouter,
   notifications: notificationsRouter,
   ai: aiRouter,
-  announcements: announcementsRouter,
+    announcements: announcementsRouter,
+  settings: settingsRouter,
 });
-
 export type AppRouter = typeof appRouter;
