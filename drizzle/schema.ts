@@ -208,6 +208,46 @@ export const commProposalInterests = mysqlTable("commProposalInterests", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+// ─── Announcements ───────────────────────────────────────────────────────────
+
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  authorId: int("authorId").notNull().references(() => users.id),
+  subject: varchar("subject", { length: 512 }).notNull(),
+  body: text("body").notNull(),
+  isPinned: boolean("isPinned").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = typeof announcements.$inferInsert;
+
+export const announcementReplies = mysqlTable("announcementReplies", {
+  id: int("id").autoincrement().primaryKey(),
+  announcementId: int("announcementId").notNull().references(() => announcements.id, { onDelete: "cascade" }),
+  authorId: int("authorId").notNull().references(() => users.id),
+  body: text("body").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AnnouncementReply = typeof announcementReplies.$inferSelect;
+
+export const announcementAttachments = mysqlTable("announcementAttachments", {
+  id: int("id").autoincrement().primaryKey(),
+  announcementId: int("announcementId").references(() => announcements.id, { onDelete: "cascade" }),
+  replyId: int("replyId").references(() => announcementReplies.id, { onDelete: "cascade" }),
+  fileName: varchar("fileName", { length: 512 }).notNull(),
+  fileKey: text("fileKey").notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileSize: bigint("fileSize", { mode: "number" }),
+  mimeType: varchar("mimeType", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AnnouncementAttachment = typeof announcementAttachments.$inferSelect;
+
 // ─── Papers ───────────────────────────────────────────────────────────────────
 
 export const papers = mysqlTable("papers", {

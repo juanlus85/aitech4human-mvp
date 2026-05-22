@@ -9,6 +9,7 @@ import {
   events, eventInterests,
   documents, documentFolders,
   tasks, notifications,
+  announcements, announcementReplies, announcementAttachments,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -669,4 +670,107 @@ export async function getUserByOpenId(_openId: string) {
 /** @deprecated Not used — custom JWT auth replaces Manus OAuth */
 export async function upsertUser(_data: Record<string, unknown>) {
   return;
+}
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+
+export async function getAllAnnouncements() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: announcements.id,
+      authorId: announcements.authorId,
+      subject: announcements.subject,
+      body: announcements.body,
+      isPinned: announcements.isPinned,
+      createdAt: announcements.createdAt,
+      updatedAt: announcements.updatedAt,
+      authorName: users.name,
+    })
+    .from(announcements)
+    .leftJoin(users, eq(announcements.authorId, users.id))
+    .orderBy(desc(announcements.isPinned), desc(announcements.createdAt));
+  return rows;
+}
+
+export async function getAnnouncementById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({
+      id: announcements.id,
+      authorId: announcements.authorId,
+      subject: announcements.subject,
+      body: announcements.body,
+      isPinned: announcements.isPinned,
+      createdAt: announcements.createdAt,
+      updatedAt: announcements.updatedAt,
+      authorName: users.name,
+    })
+    .from(announcements)
+    .leftJoin(users, eq(announcements.authorId, users.id))
+    .where(eq(announcements.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createAnnouncement(data: typeof announcements.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(announcements).values(sanitize(data));
+  const r = await db.select().from(announcements).orderBy(desc(announcements.createdAt)).limit(1);
+  return r[0] ?? null;
+}
+
+export async function updateAnnouncement(id: number, data: Partial<typeof announcements.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(announcements).set(data).where(eq(announcements.id, id));
+}
+
+export async function deleteAnnouncement(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcements).where(eq(announcements.id, id));
+}
+
+export async function getAnnouncementReplies(announcementId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: announcementReplies.id,
+      announcementId: announcementReplies.announcementId,
+      authorId: announcementReplies.authorId,
+      body: announcementReplies.body,
+      createdAt: announcementReplies.createdAt,
+      updatedAt: announcementReplies.updatedAt,
+      authorName: users.name,
+    })
+    .from(announcementReplies)
+    .leftJoin(users, eq(announcementReplies.authorId, users.id))
+    .where(eq(announcementReplies.announcementId, announcementId))
+    .orderBy(announcementReplies.createdAt);
+  return rows;
+}
+
+export async function createAnnouncementReply(data: typeof announcementReplies.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(announcementReplies).values(sanitize(data));
+  const r = await db.select().from(announcementReplies).orderBy(desc(announcementReplies.createdAt)).limit(1);
+  return r[0] ?? null;
+}
+
+export async function deleteAnnouncementReply(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcementReplies).where(eq(announcementReplies.id, id));
+}
+
+export async function getAnnouncementAttachments(announcementId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(announcementAttachments).where(eq(announcementAttachments.announcementId, announcementId));
 }

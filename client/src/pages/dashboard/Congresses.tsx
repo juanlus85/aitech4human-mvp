@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
 import { Plus, Trophy, CalendarDays, MapPin, DollarSign, Globe, Trash2, ChevronRight, Star, StarOff, MessageSquarePlus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const MODALITIES = ["in-person", "online", "hybrid"] as const;
 const MODALITY_LABELS: Record<string, string> = { "in-person": "In Person", "online": "Online", "hybrid": "Hybrid" };
@@ -229,6 +230,12 @@ export default function Congresses() {
                   <Label>Additional Info</Label>
                   <Textarea value={form.additionalInfo} onChange={(e) => setForm({ ...form, additionalInfo: e.target.value })} rows={2} />
                 </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                <Checkbox id="notifyEmailCongress" />
+                <Label htmlFor="notifyEmailCongress" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                  Notify members by email
+                </Label>
               </div>
               <Button className="w-full" onClick={handleCreate} disabled={!form.name || createMutation.isPending}>
                 {createMutation.isPending ? "Saving..." : "Add Congress"}

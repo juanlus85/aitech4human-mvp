@@ -8,7 +8,6 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/members", label: "Members" },
-  { href: "/news", label: "News" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -24,7 +23,7 @@ export default function PublicHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center group">
             <img
-              src="/logo-horizontal.png"
+              src="/manus-storage/logo-transparent_b00932e3.png"
               alt="AI&Tech4Human"
               className="h-10 w-auto object-contain group-hover:opacity-90 transition-opacity"
             />

@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FlaskConical, Eye, EyeOff, Lock } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -41,13 +41,8 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/">
-            <div className="inline-flex items-center gap-2.5 group cursor-pointer">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <FlaskConical className="w-5 h-5 text-primary" />
-              </div>
-              <span className="font-serif font-semibold text-foreground text-xl">
-                AI<span className="text-primary">&</span>Tech4Human
-              </span>
+            <div className="inline-flex items-center justify-center cursor-pointer">
+              <img src="/manus-storage/logo-transparent_b00932e3.png" alt="AI&Tech4Human" className="h-14 object-contain" />
             </div>
           </Link>
           <p className="text-sm text-muted-foreground mt-3">Member Area — Sign in to continue</p>

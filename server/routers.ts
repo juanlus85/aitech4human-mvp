@@ -23,6 +23,9 @@ import {
   getAllTasks, createTask, updateTask, deleteTask,
   getNotificationsForUser, createNotification, markNotificationRead,
   markAllNotificationsRead, getUnreadNotificationCount,
+  getAllAnnouncements, getAnnouncementById, createAnnouncement, updateAnnouncement, deleteAnnouncement,
+  getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
+  getAnnouncementAttachments,
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
@@ -829,6 +832,84 @@ const aiRouter = router({
 
 // ─── App Router ───────────────────────────────────────────────────────────────
 
+// ─── Announcements Router ─────────────────────────────────────────────────────
+const announcementsRouter = router({
+  list: protectedProcedure.query(async () => {
+    return getAllAnnouncements();
+  }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const ann = await getAnnouncementById(input.id);
+      if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
+      const replies = await getAnnouncementReplies(input.id);
+      const attachments = await getAnnouncementAttachments(input.id);
+      return { ...ann, replies, attachments };
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      subject: z.string().min(1).max(512),
+      body: z.string().min(1),
+      isPinned: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return createAnnouncement({
+        authorId: ctx.user.id,
+        subject: input.subject,
+        body: input.body,
+        isPinned: input.isPinned ?? false,
+      });
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      subject: z.string().min(1).max(512).optional(),
+      body: z.string().min(1).optional(),
+      isPinned: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const ann = await getAnnouncementById(input.id);
+      if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
+      if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { id, ...data } = input;
+      await updateAnnouncement(id, data);
+      return { success: true };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const ann = await getAnnouncementById(input.id);
+      if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
+      if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await deleteAnnouncement(input.id);
+      return { success: true };
+    }),
+
+  reply: protectedProcedure
+    .input(z.object({
+      announcementId: z.number(),
+      body: z.string().min(1),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return createAnnouncementReply({
+        announcementId: input.announcementId,
+        authorId: ctx.user.id,
+        body: input.body,
+      });
+    }),
+
+  deleteReply: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await deleteAnnouncementReply(input.id);
+      return { success: true };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -844,6 +925,7 @@ export const appRouter = router({
   tasks: tasksRouter,
   notifications: notificationsRouter,
   ai: aiRouter,
+  announcements: announcementsRouter,
 });
 
 export type AppRouter = typeof appRouter;

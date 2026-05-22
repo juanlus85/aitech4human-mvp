@@ -84,6 +84,18 @@ export default function Assistant() {
           </div>
         </div>
 
+        {/* Notice banner */}
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3">
+          <span className="text-amber-500 text-lg leading-none mt-0.5">⚠️</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-900">AI features require an OpenAI API key</p>
+            <p className="text-xs text-amber-700 mt-1">
+              The AI assistant is currently unavailable because no OpenAI API key has been configured on the server.
+              Please contact the administrator to add the API key in the server environment settings.
+            </p>
+          </div>
+        </div>
+
         <Tabs defaultValue="journals" className="space-y-4">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="journals" className="gap-1.5 text-xs">

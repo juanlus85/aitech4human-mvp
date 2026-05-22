@@ -19,6 +19,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/dashboard/Profile";
 import Messages from "./pages/dashboard/Messages";
+import Announcements from "./pages/dashboard/Announcements";
 import Meetings from "./pages/dashboard/Meetings";
 import Congresses from "./pages/dashboard/Congresses";
 import Papers from "./pages/dashboard/Papers";
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/profile" component={Profile} />
       <Route path="/dashboard/messages" component={Messages} />
+      <Route path="/dashboard/announcements" component={Announcements} />
       <Route path="/dashboard/meetings" component={Meetings} />
       <Route path="/dashboard/congresses" component={Congresses} />
       <Route path="/dashboard/papers" component={Papers} />

@@ -92,3 +92,18 @@
 ## Round 5: MySQL Date Fix
 
 - [x] Fix Meetings/Congresses/Papers/Events insert failures on production MySQL — root cause was drizzle passing Date objects with milliseconds (2026-05-23 12:12:00.000) which MySQL rejects; fixed by initializing mysql2 pool with timezone:'+00:00' and dateStrings:false
+
+## Round 9 — New features & fixes
+
+- [ ] Update logo with new transparent PNG in header, sidebar, and favicon
+- [ ] Remove "News" from public navigation menu
+- [ ] Create Announcements module: DB tables (announcements, announcementReplies, announcementAttachments)
+- [ ] Create Announcements module: tRPC procedures (list, getById, create, reply, delete)
+- [ ] Create Announcements module: UI page with forum-style thread view, file attachments
+- [ ] Add "Announcements" to dashboard sidebar navigation
+- [ ] Add "Notify by email" checkbox (unchecked by default) to Events creation form
+- [ ] Add "Notify by email" checkbox (unchecked by default) to Congresses creation form
+- [ ] Add "Notify by email" checkbox (unchecked by default) to Papers creation form
+- [ ] Add "Notify by email" checkbox (unchecked by default) to Announcements creation form
+- [ ] Fix Contact form: show clear message that SMTP is not configured
+- [ ] Fix AI Assistant: show clear message that OpenAI API key is not configured

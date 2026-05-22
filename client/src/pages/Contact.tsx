@@ -16,16 +16,10 @@ const universities = [
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
-  const [sending, setSending] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      toast.success("Message sent! We will get back to you soon.");
-      setForm({ name: "", email: "", subject: "", message: "" });
-    }, 1000);
+    toast.warning("Email sending is not yet configured. Please contact us directly using the email addresses listed on the right.");
   };
 
   return (
@@ -92,8 +86,12 @@ export default function Contact() {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full font-medium" disabled={sending}>
-                    {sending ? "Sending..." : "Send Message"}
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5">⚠</span>
+                    <span>Email sending requires SMTP configuration. Please contact us directly using the addresses on the right.</span>
+                  </div>
+                  <Button type="submit" className="w-full font-medium" disabled>
+                    Send Message (SMTP not configured)
                   </Button>
                 </form>
               </div>

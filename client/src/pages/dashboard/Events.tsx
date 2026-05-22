@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
 import { Plus, Globe, CalendarDays, MapPin, Trash2, ChevronRight, Star, Video } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const MODALITY_LABELS: Record<string, string> = {
   "in-person": "In Person",
@@ -149,6 +150,12 @@ export default function Events() {
               <div className="space-y-1.5">
                 <Label>Description</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+              </div>
+              <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                <Checkbox id="notifyEmailEvent" />
+                <Label htmlFor="notifyEmailEvent" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                  Notify members by email
+                </Label>
               </div>
               <Button className="w-full"
                 onClick={() => createMutation.mutate({

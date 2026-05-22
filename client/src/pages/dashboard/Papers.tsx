@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
 import { Plus, BookOpen, Users, ExternalLink, Trash2, ChevronRight, Edit2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const STATUSES = [
   { value: "idea",         label: "Idea",          color: "bg-slate-100 text-slate-700" },
@@ -242,6 +243,12 @@ export default function Papers() {
               <div className="space-y-1.5">
                 <Label>Additional Info</Label>
                 <Textarea value={form.additionalInfo} onChange={(e) => setForm({ ...form, additionalInfo: e.target.value })} rows={2} />
+              </div>
+              <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                <Checkbox id="notifyEmailPaper" />
+                <Label htmlFor="notifyEmailPaper" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                  Notify members by email
+                </Label>
               </div>
               <Button className="w-full" onClick={handleCreate} disabled={!form.title || createMutation.isPending}>
                 {createMutation.isPending ? "Saving..." : "Add Paper"}
