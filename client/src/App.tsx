@@ -26,6 +26,7 @@ import Congresses from "./pages/dashboard/Congresses";
 import Papers from "./pages/dashboard/Papers";
 import Events from "./pages/dashboard/Events";
 import Documents from "./pages/dashboard/Documents";
+import Links from "./pages/dashboard/Links";
 import Tasks from "./pages/dashboard/Tasks";
 import Notifications from "./pages/dashboard/Notifications";
 import Assistant from "./pages/dashboard/Assistant";
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/dashboard/papers" component={Papers} />
       <Route path="/dashboard/events" component={Events} />
       <Route path="/dashboard/documents" component={Documents} />
+      <Route path="/dashboard/links" component={Links} />
       <Route path="/dashboard/tasks" component={Tasks} />
       <Route path="/dashboard/notifications" component={Notifications} />
       <Route path="/dashboard/assistant" component={Assistant} />

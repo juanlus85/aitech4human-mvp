@@ -85,13 +85,13 @@ export default function Assistant() {
         </div>
 
         {/* Notice banner */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3">
-          <span className="text-amber-500 text-lg leading-none mt-0.5">⚠️</span>
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 flex items-start gap-3">
+          <span className="text-blue-500 text-lg leading-none mt-0.5">ℹ️</span>
           <div>
-            <p className="text-sm font-semibold text-amber-900">AI features require an OpenAI API key</p>
-            <p className="text-xs text-amber-700 mt-1">
-              The AI assistant is currently unavailable because no OpenAI API key has been configured on the server.
-              Please contact the administrator to add the API key in the server environment settings.
+            <p className="text-sm font-semibold text-blue-900">OpenAI API key required</p>
+            <p className="text-xs text-blue-700 mt-1">
+              To use the AI assistant, go to <strong>Admin → Settings → AI Configuration</strong> and enter your OpenAI API key.
+              Once configured, all AI features will be available immediately.
             </p>
           </div>
         </div>

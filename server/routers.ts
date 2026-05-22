@@ -27,6 +27,7 @@ import {
   getAllAnnouncements, getAnnouncementById, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
   getAnnouncementAttachments,
+  getAllLinks, createLink, deleteLink, updateLink,
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
@@ -337,9 +338,10 @@ const meetingsRouter = router({
       fixedDate: z.coerce.date().optional(),
       pollDeadline: z.coerce.date().optional(),
       dateOptions: z.array(z.coerce.date()).optional(),
+      notifyEmail: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { dateOptions, ...meetingData } = input;
+      const { dateOptions, notifyEmail, ...meetingData } = input;
       const meeting = await createMeeting({ ...meetingData, organizerId: ctx.user.id });
       if (meeting && input.type === "poll" && dateOptions) {
         for (const d of dateOptions) {
@@ -359,9 +361,22 @@ const meetingsRouter = router({
           });
         }
       }
+            if (notifyEmail && meeting) {
+        try {
+          const emails = await getAllUserEmails();
+          const dateStr = input.fixedDate ? new Date(input.fixedDate).toLocaleString() : "TBD (date poll)";
+          await notifyMembers({
+            subject: `New Meeting: ${input.title}`,
+            title: `New Meeting: ${input.title}`,
+            body: `Date: ${dateStr}\nModality: ${input.modality}${input.location ? `\nLocation: ${input.location}` : ""}${input.agenda ? `\nAgenda: ${input.agenda}` : ""}`,
+            memberEmails: emails,
+          });
+        } catch (err) {
+          console.error("[Email] Failed to send meeting notification:", err);
+        }
+      }
       return meeting;
     }),
-
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
@@ -811,8 +826,40 @@ const notificationsRouter = router({
 
 // ─── AI Assistant Router ──────────────────────────────────────────────────────
 
+// Helper: call OpenAI using API key from appSettings DB
+async function callOpenAI(messages: Array<{role: string; content: string}>, responseFormat?: Record<string, unknown>) {
+  const settings = await getAppSettings();
+  const apiKey = settings["openai_api_key"];
+  if (!apiKey) throw new Error("OpenAI API key is not configured. Please add it in Settings → AI Configuration.");
+  const body: Record<string, unknown> = {
+    model: "gpt-4o-mini",
+    messages,
+  };
+  if (responseFormat) body.response_format = responseFormat;
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenAI API error: ${res.status} – ${err}`);
+  }
+  return res.json();
+}
+
 const aiRouter = router({
   suggestJournals: protectedProcedure
+    .input(z.object({ abstract: z.string().min(10), keywords: z.string().optional() }))
+    .mutation(async ({ input }) => {
+      const response = await callOpenAI([
+        { role: "system", content: "You are an academic publishing expert. Given a paper abstract and keywords, suggest 5 relevant academic journals with a brief justification for each. Format as JSON object with a 'journals' array, each item having: name, publisher, impactFactor (string, if known), justification." },
+        { role: "user", content: `Abstract: ${input.abstract}\nKeywords: ${input.keywords ?? ""}` },
+      ], { type: "json_object" });
+      const content = (response.choices[0]?.message?.content as string) ?? "{}";
+      return JSON.parse(content);
+    }),
+  _suggestJournals_old: protectedProcedure
     .input(z.object({ abstract: z.string().min(10), keywords: z.string().optional() }))
     .mutation(async ({ input }) => {
       const response = await invokeLLM({
@@ -859,36 +906,22 @@ const aiRouter = router({
       return JSON.parse(content);
     }),
 
-  summarizeMeeting: protectedProcedure
+    summarizeMeeting: protectedProcedure
     .input(z.object({ notes: z.string().min(10) }))
     .mutation(async ({ input }) => {
-      const response = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: "You are an academic meeting secretary. Given meeting notes, produce a structured summary with: key decisions, action items with owners, open questions, and a brief executive summary. Be concise and professional.",
-          },
-          { role: "user", content: input.notes },
-        ],
-      });
+      const response = await callOpenAI([
+        { role: "system", content: "You are an academic meeting secretary. Given meeting notes, produce a structured summary with: key decisions, action items with owners, open questions, and a brief executive summary. Be concise and professional." },
+        { role: "user", content: input.notes },
+      ]);
       return { summary: (response.choices[0]?.message?.content as string) ?? "" };
     }),
-
   draftCongressDescription: protectedProcedure
     .input(z.object({ name: z.string(), topic: z.string(), details: z.string().optional() }))
     .mutation(async ({ input }) => {
-      const response = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: "You are an academic communications expert. Draft a professional, engaging congress/conference description suitable for a research group's internal platform. Keep it informative, concise, and highlight relevance to AI, technology, and human wellbeing research.",
-          },
-          {
-            role: "user",
-            content: `Congress name: ${input.name}\nTopic: ${input.topic}\nAdditional details: ${input.details ?? ""}`,
-          },
-        ],
-      });
+      const response = await callOpenAI([
+        { role: "system", content: "You are an academic communications expert. Draft a professional, engaging conference description suitable for a research group's internal platform. Keep it informative, concise, and highlight relevance to AI, technology, and human wellbeing research." },
+        { role: "user", content: `Conference name: ${input.name}\nTopic: ${input.topic}\nAdditional details: ${input.details ?? ""}` },
+      ]);
       return { draft: (response.choices[0]?.message?.content as string) ?? "" };
     }),
 });
@@ -1011,6 +1044,43 @@ const settingsRouter = router({
     }),
 });
 
+const linksRouter = router({
+  list: protectedProcedure.query(async () => getAllLinks()),
+  create: protectedProcedure
+    .input(z.object({
+      title: z.string().min(1),
+      url: z.string().url(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => createLink({ ...input, creatorId: ctx.user.id })),
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().optional(),
+      url: z.string().url().optional(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const all = await getAllLinks();
+      const link = all.find((l: { id: number; creatorId: number }) => l.id === input.id);
+      if (!link) throw new TRPCError({ code: "NOT_FOUND" });
+      if (link.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { id, ...data } = input;
+      return updateLink(id, data);
+    }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const all = await getAllLinks();
+      const link = all.find((l: { id: number; creatorId: number }) => l.id === input.id);
+      if (!link) throw new TRPCError({ code: "NOT_FOUND" });
+      if (link.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return deleteLink(input.id);
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -1026,7 +1096,8 @@ export const appRouter = router({
   tasks: tasksRouter,
   notifications: notificationsRouter,
   ai: aiRouter,
-    announcements: announcementsRouter,
+  announcements: announcementsRouter,
   settings: settingsRouter,
+  links: linksRouter,
 });
 export type AppRouter = typeof appRouter;

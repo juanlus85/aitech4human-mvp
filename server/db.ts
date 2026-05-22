@@ -11,6 +11,7 @@ import {
   tasks, notifications,
   announcements, announcementReplies, announcementAttachments,
   appSettings,
+  links,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -821,4 +822,37 @@ export async function getAllUserEmails(): Promise<string[]> {
   if (!db) return [];
   const rows = await db.select({ email: users.email }).from(users);
   return rows.map((r) => r.email).filter(Boolean) as string[];
+}
+
+// ─── Links ────────────────────────────────────────────────────────────────────
+export async function getAllLinks() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: links.id,
+    creatorId: links.creatorId,
+    title: links.title,
+    url: links.url,
+    description: links.description,
+    category: links.category,
+    createdAt: links.createdAt,
+    updatedAt: links.updatedAt,
+    creatorName: users.name,
+  }).from(links).leftJoin(users, eq(links.creatorId, users.id)).orderBy(desc(links.createdAt));
+}
+export async function createLink(data: { creatorId: number; title: string; url: string; description?: string; category?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(links).values(data);
+  return result;
+}
+export async function deleteLink(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(links).where(eq(links.id, id));
+}
+export async function updateLink(id: number, data: { title?: string; url?: string; description?: string; category?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.update(links).set({ ...data, updatedAt: new Date() }).where(eq(links.id, id));
 }

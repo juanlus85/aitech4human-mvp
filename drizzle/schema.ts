@@ -380,3 +380,17 @@ export const appSettings = mysqlTable("appSettings", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type AppSetting = typeof appSettings.$inferSelect;
+
+// ─── Links ────────────────────────────────────────────────────────────────────
+export const links = mysqlTable("links", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  url: varchar("url", { length: 1000 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Link = typeof links.$inferSelect;
+export type InsertLink = typeof links.$inferInsert;
