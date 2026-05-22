@@ -232,10 +232,43 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0 py-1">
-            <NavGroup items={mainNav} />
-            <NavGroup items={collaborationNav} label="Collaboration" />
-            <NavGroup items={resourcesNav} label="Resources" />
-            {isAdmin && <NavGroup items={adminNav} label="Administration" />}
+            {isMobile ? (
+              <SidebarGroup>
+                <SidebarMenu className="px-2 py-0">
+                  {[
+                    ...mainNav,
+                    ...collaborationNav,
+                    ...resourcesNav,
+                    ...(isAdmin ? adminNav : []),
+                  ].map((item) => {
+                    const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => navigate(item.path)}
+                          tooltip={item.label}
+                          className="h-9 font-normal text-sm"
+                        >
+                          <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                          <span>{item.label}</span>
+                          {item.label === "Notifications" && unreadCount && unreadCount > 0 && (
+                            <Badge className="ml-auto h-4 min-w-4 px-1 text-[10px] bg-primary text-primary-foreground">{unreadCount}</Badge>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            ) : (
+              <>
+                <NavGroup items={mainNav} />
+                <NavGroup items={collaborationNav} label="Collaboration" />
+                <NavGroup items={resourcesNav} label="Resources" />
+                {isAdmin && <NavGroup items={adminNav} label="Administration" />}
+              </>
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-3 border-t border-border/50">
