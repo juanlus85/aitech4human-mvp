@@ -37,6 +37,7 @@ export default function Congresses() {
   const [proposalTopic, setProposalTopic] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", acronym: "", description: "", topic: "", startDateStr: "", endDateStr: "", location: "", country: "", modality: "in-person" as typeof MODALITIES[number], registrationFee: "", websiteUrl: "", cfpUrl: "", abstractDeadlineStr: "", paperDeadlineStr: "", registrationDeadlineStr: "", additionalInfo: "" });
+  const [selectedProposalId, setSelectedProposalId] = useState<number | null>(null);
 
   const { data: congresses, isLoading } = trpc.congresses.list.useQuery();
   const { data: detail } = trpc.congresses.getById.useQuery(
@@ -77,6 +78,18 @@ export default function Congresses() {
   const toggleProposalInterestMutation = trpc.congresses.toggleProposalInterest.useMutation({
     onSuccess: () => {
       if (selectedId) utils.congresses.getById.invalidate({ id: selectedId });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const { data: proposalAttendance } = trpc.congresses.getProposalAttendance.useQuery(
+    { communicationId: selectedProposalId! },
+    { enabled: !!selectedProposalId }
+  );
+
+  const respondAttendanceMutation = trpc.congresses.respondProposalAttendance.useMutation({
+    onSuccess: () => {
+      if (selectedProposalId) utils.congresses.getProposalAttendance.invalidate({ communicationId: selectedProposalId });
     },
     onError: (e) => toast.error(e.message),
   });
@@ -336,24 +349,75 @@ export default function Congresses() {
                     )}
                     {detail.proposals?.map((p: any) => {
                       const myInterest = p.interests?.some((i: any) => i.userId === user?.id);
+                      const isThisSelected = selectedProposalId === p.id;
+                      const myAttendance = isThisSelected ? proposalAttendance?.find((a: any) => a.userId === user?.id)?.response : null;
                       return (
-                        <div key={p.id} className="glass-card rounded-lg p-3 flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{p.title}</p>
-                            {p.topic && <p className="text-xs text-muted-foreground">{p.topic}</p>}
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {p.interests?.length ?? 0} interested
-                            </p>
+                        <div key={p.id} className="glass-card rounded-lg p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground">{p.title}</p>
+                              {p.topic && <p className="text-xs text-muted-foreground">{p.topic}</p>}
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {p.interests?.length ?? 0} interested
+                                {isThisSelected && proposalAttendance && proposalAttendance.length > 0 && (
+                                  <span className="ml-2">· {proposalAttendance.filter((a: any) => a.response === "attending").length} attending</span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+                              <Button
+                                variant={myInterest ? "default" : "outline"}
+                                size="sm"
+                                className={`gap-1 h-7 text-xs ${!myInterest ? "bg-white/60" : ""}`}
+                                onClick={() => toggleProposalInterestMutation.mutate({ communicationId: p.id })}
+                              >
+                                {myInterest ? <Star className="w-3 h-3" /> : <StarOff className="w-3 h-3" />}
+                                {myInterest ? "Interested" : "Interested?"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-muted-foreground"
+                                onClick={() => setSelectedProposalId(isThisSelected ? null : p.id)}
+                              >
+                                {isThisSelected ? "Hide" : "Attendance"}
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            variant={myInterest ? "default" : "outline"}
-                            size="sm"
-                            className={`gap-1.5 shrink-0 ${!myInterest ? "bg-white/60" : ""}`}
-                            onClick={() => toggleProposalInterestMutation.mutate({ communicationId: p.id })}
-                          >
-                            {myInterest ? <Star className="w-3.5 h-3.5" /> : <StarOff className="w-3.5 h-3.5" />}
-                            {myInterest ? "Interested" : "I'm interested"}
-                          </Button>
+                          {isThisSelected && (
+                            <div className="border-t border-border/40 pt-2 space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">Your attendance:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {(["attending", "maybe", "not_attending"] as const).map((r) => (
+                                  <Button
+                                    key={r}
+                                    size="sm"
+                                    variant={myAttendance === r ? "default" : "outline"}
+                                    className={`h-7 text-xs gap-1 ${myAttendance === r ? "" : "bg-white/60"}`}
+                                    onClick={() => respondAttendanceMutation.mutate({ communicationId: p.id, response: r })}
+                                    disabled={respondAttendanceMutation.isPending}
+                                  >
+                                    {r === "attending" ? "✓ Will attend" : r === "maybe" ? "? Not sure" : "✗ Cannot attend"}
+                                  </Button>
+                                ))}
+                              </div>
+                              {proposalAttendance && proposalAttendance.length > 0 && (
+                                <div className="text-xs text-muted-foreground space-y-1">
+                                  <p className="font-medium">Responses:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {proposalAttendance.map((a: any) => (
+                                      <span key={a.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                                        a.response === "attending" ? "bg-emerald-50 text-emerald-700" :
+                                        a.response === "maybe" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
+                                      }`}>
+                                        {a.userName ?? "Member"} · {a.response === "attending" ? "attending" : a.response === "maybe" ? "not sure" : "cannot attend"}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

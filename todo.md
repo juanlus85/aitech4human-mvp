@@ -140,15 +140,15 @@
 
 ## Round 13 — Edit/Delete, Attendance, Rename, Project Proposals
 
-- [ ] Fix broken logo in Links page
-- [ ] Add edit/delete to Announcements (own posts + admin)
-- [ ] Add edit/delete to Meetings
-- [ ] Add edit/delete to Events
-- [ ] Add edit/delete to Conferences
-- [ ] Add edit/delete to Papers
-- [ ] Add edit/delete to Links
-- [ ] Add edit/delete to Documents
-- [ ] Add attendance tracking to Conferences proposals (interested + will attend/not sure/cannot attend)
-- [ ] Show who is interested in each Conference proposal
-- [ ] Rename "Papers" → "Paper Proposals" throughout UI and sidebar
-- [ ] Create Project Proposals section (schema, backend, frontend, sidebar nav)
+- [x] Fix broken logo in Links page
+- [x] Add edit/delete to Announcements (own posts + admin)
+- [x] Add edit/delete to Meetings
+- [x] Add edit/delete to Events
+- [x] Add edit/delete to Conferences
+- [x] Add edit/delete to Papers
+- [x] Add edit/delete to Links
+- [x] Add edit/delete to Documents
+- [x] Add attendance tracking to Conferences proposals (interested + will attend/not sure/cannot attend)
+- [x] Show who is interested in each Conference proposal
+- [x] Rename "Papers" → "Paper Proposals" throughout UI and sidebar
+- [x] Create Project Proposals section (schema, backend, frontend, sidebar nav)
