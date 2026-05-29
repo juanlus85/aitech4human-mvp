@@ -32,6 +32,8 @@ import {
   getCongressAttendance, upsertCongressAttendance, removeCongressAttendance,
   getAllProjectProposals, getProjectProposalById, createProjectProposal, updateProjectProposal, deleteProjectProposal,
   getProjectProposalInterests, toggleProjectProposalInterest,
+  getAllResearchLines, createResearchLine, updateResearchLine, deleteResearchLine,
+  joinResearchLine, leaveResearchLine,
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
@@ -1168,6 +1170,53 @@ const projectProposalsRouter = router({
     .input(z.object({ proposalId: z.number() }))
     .mutation(({ input, ctx }) => toggleProjectProposalInterest(input.proposalId, ctx.user.id)),
 });
+
+// ─── Research Lines Router ────────────────────────────────────────────────────
+const researchLinesRouter = router({
+  getAll: protectedProcedure.query(() => getAllResearchLines()),
+  create: protectedProcedure
+    .input(z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      objectives: z.string().optional(),
+      keywords: z.string().optional(),
+      status: z.enum(["active", "inactive", "completed"]).optional(),
+    }))
+    .mutation(({ input, ctx }) => createResearchLine({ ...input, creatorId: ctx.user.id })),
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().min(1).optional(),
+      description: z.string().optional(),
+      objectives: z.string().optional(),
+      keywords: z.string().optional(),
+      status: z.enum(["active", "inactive", "completed"]).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const lines = await getAllResearchLines();
+      const line = lines.find((l) => l.id === input.id);
+      if (!line) throw new TRPCError({ code: "NOT_FOUND" });
+      if (line.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { id, ...data } = input;
+      return updateResearchLine(id, data);
+    }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const lines = await getAllResearchLines();
+      const line = lines.find((l) => l.id === input.id);
+      if (!line) throw new TRPCError({ code: "NOT_FOUND" });
+      if (line.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return deleteResearchLine(input.id);
+    }),
+  join: protectedProcedure
+    .input(z.object({ lineId: z.number() }))
+    .mutation(({ input, ctx }) => joinResearchLine(input.lineId, ctx.user.id)),
+  leave: protectedProcedure
+    .input(z.object({ lineId: z.number() }))
+    .mutation(({ input, ctx }) => leaveResearchLine(input.lineId, ctx.user.id)),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -1187,5 +1236,6 @@ export const appRouter = router({
   settings: settingsRouter,
   links: linksRouter,
   projectProposals: projectProposalsRouter,
+  researchLines: researchLinesRouter,
 });
 export type AppRouter = typeof appRouter;

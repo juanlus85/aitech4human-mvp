@@ -45,6 +45,7 @@ import {
   Trophy,
   User,
   Users,
+  Microscope,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -71,6 +72,7 @@ const collaborationNav = [
   { icon: BookOpen, label: "Paper Proposals", path: "/dashboard/papers" },
   { icon: Globe, label: "Events", path: "/dashboard/events" },
   { icon: FlaskConical, label: "Project Proposals", path: "/dashboard/project-proposals" },
+  { icon: Microscope, label: "Research Lines", path: "/dashboard/research-lines" },
 ];
 
 const resourcesNav = [

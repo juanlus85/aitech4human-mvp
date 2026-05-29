@@ -446,3 +446,27 @@ export const congressAttendance = mysqlTable("congressAttendance", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type CongressAttendance = typeof congressAttendance.$inferSelect;
+
+// ─── Research Lines ───────────────────────────────────────────────────────────
+export const researchLines = mysqlTable("researchLines", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id, { onDelete: "no action" }),
+  title: varchar("title", { length: 512 }).notNull(),
+  description: text("description"),
+  objectives: text("objectives"),
+  keywords: varchar("keywords", { length: 512 }),
+  status: mysqlEnum("status", ["active", "inactive", "completed"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ResearchLine = typeof researchLines.$inferSelect;
+export type InsertResearchLine = typeof researchLines.$inferInsert;
+
+export const researchLineMembers = mysqlTable("researchLineMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  lineId: int("lineId").notNull().references(() => researchLines.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: mysqlEnum("role", ["lead", "member"]).default("member").notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+export type ResearchLineMember = typeof researchLineMembers.$inferSelect;

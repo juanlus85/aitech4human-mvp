@@ -36,6 +36,13 @@
       "when": 1779489592211,
       "tag": "0004_magical_epoch",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1780053094024,
+      "tag": "0005_first_avengers",
+      "breakpoints": true
     }
   ]
 }

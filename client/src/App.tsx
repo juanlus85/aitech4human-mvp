@@ -32,6 +32,7 @@ import Notifications from "./pages/dashboard/Notifications";
 import Assistant from "./pages/dashboard/Assistant";
 import Calendar from "./pages/dashboard/Calendar";
 import ProjectProposals from "./pages/dashboard/ProjectProposals";
+import ResearchLines from "./pages/dashboard/ResearchLines";
 
 // Admin pages
 import AdminUsers from "./pages/dashboard/admin/AdminUsers";
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/dashboard/assistant" component={Assistant} />
       <Route path="/dashboard/calendar" component={Calendar} />
       <Route path="/dashboard/project-proposals" component={ProjectProposals} />
+      <Route path="/dashboard/research-lines" component={ResearchLines} />
 
       {/* Admin */}
       <Route path="/dashboard/settings" component={Settings} />

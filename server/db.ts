@@ -14,6 +14,7 @@ import {
   links,
   projectProposals, projectProposalInterests,
   congressAttendance,
+  researchLines, researchLineMembers,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1022,4 +1023,54 @@ export async function removeCongressAttendance(congressId: number, userId: numbe
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   return db.delete(congressAttendance).where(and(eq(congressAttendance.congressId, congressId), eq(congressAttendance.userId, userId)));
+}
+
+// ─── Research Lines ───────────────────────────────────────────────────────────
+export async function getAllResearchLines() {
+  const db = await getDb();
+  if (!db) return [];
+  const lines = await db.select().from(researchLines).orderBy(desc(researchLines.createdAt));
+  const members = await db
+    .select({ lineId: researchLineMembers.lineId, userId: researchLineMembers.userId, role: researchLineMembers.role, joinedAt: researchLineMembers.joinedAt, name: users.name, email: users.email })
+    .from(researchLineMembers)
+    .leftJoin(users, eq(researchLineMembers.userId, users.id));
+  return lines.map((l) => ({
+    ...l,
+    members: members.filter((m) => m.lineId === l.id),
+  }));
+}
+
+export async function createResearchLine(data: { creatorId: number; title: string; description?: string; objectives?: string; keywords?: string; status?: "active" | "inactive" | "completed" }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(researchLines).values({ ...data, status: data.status ?? "active" });
+  return result;
+}
+
+export async function updateResearchLine(id: number, data: { title?: string; description?: string; objectives?: string; keywords?: string; status?: "active" | "inactive" | "completed" }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.update(researchLines).set({ ...data, updatedAt: new Date() }).where(eq(researchLines.id, id));
+}
+
+export async function deleteResearchLine(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(researchLines).where(eq(researchLines.id, id));
+}
+
+export async function joinResearchLine(lineId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const existing = await db.select({ id: researchLineMembers.id }).from(researchLineMembers).where(and(eq(researchLineMembers.lineId, lineId), eq(researchLineMembers.userId, userId))).limit(1);
+  if (existing.length === 0) {
+    await db.insert(researchLineMembers).values({ lineId, userId, role: "member" });
+  }
+  return { lineId, userId };
+}
+
+export async function leaveResearchLine(lineId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(researchLineMembers).where(and(eq(researchLineMembers.lineId, lineId), eq(researchLineMembers.userId, userId)));
 }
