@@ -127,12 +127,13 @@ export default function AdminUsers() {
                 <th className="px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide">Role</th>
                 <th className="px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide">Joined</th>
+                <th className="px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide">Last Login</th>
                 <th className="px-4 py-3 text-xs text-muted-foreground font-medium uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
               {isLoading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
               ) : users?.map((u) => (
                 <tr key={u.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
@@ -159,6 +160,11 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {format(new Date(u.createdAt), "MMM d, yyyy")}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {u.lastSignedIn
+                      ? format(new Date(u.lastSignedIn), "MMM d, yyyy HH:mm")
+                      : <span className="italic opacity-50">Never</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
