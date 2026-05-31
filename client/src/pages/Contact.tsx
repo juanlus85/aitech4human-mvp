@@ -8,10 +8,8 @@ import { Globe, Mail, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const universities = [
-  { name: "University of Seville", country: "Spain", email: "jbguzman@us.es" },
-  { name: "Haaga-Helia University of Applied Sciences", country: "Finland", email: "Jouko.Loijas@haaga-helia.fi" },
-  { name: "University of Montenegro", country: "Montenegro", email: "psanja@ucg.ac.me" },
+const contacts = [
+  { name: "Juan Luis Blanco Guzmán", role: "Lead Researcher", email: "jbguzman@us.es" },
 ];
 
 export default function Contact() {
@@ -101,15 +99,15 @@ export default function Contact() {
             <div className="lg:col-span-2 space-y-5">
               <div className="glass-card rounded-xl p-6">
                 <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" /> Partner Contacts
+                  <Users className="w-4 h-4 text-primary" /> Lead Researcher
                 </h3>
                 <div className="space-y-4">
-                  {universities.map((uni) => (
-                    <div key={uni.name} className="border-b border-border/50 last:border-0 pb-4 last:pb-0">
-                      <p className="text-sm font-medium text-foreground">{uni.name}</p>
-                      <p className="text-xs text-muted-foreground mb-1">{uni.country}</p>
-                      <a href={`mailto:${uni.email}`} className="text-xs text-primary hover:underline flex items-center gap-1">
-                        <Mail className="w-3 h-3" /> {uni.email}
+                  {contacts.map((c) => (
+                    <div key={c.name} className="border-b border-border/50 last:border-0 pb-4 last:pb-0">
+                      <p className="text-sm font-medium text-foreground">{c.name}</p>
+                      <p className="text-xs text-muted-foreground mb-1">{c.role}</p>
+                      <a href={`mailto:${c.email}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                        <Mail className="w-3 h-3" /> {c.email}
                       </a>
                     </div>
                   ))}
