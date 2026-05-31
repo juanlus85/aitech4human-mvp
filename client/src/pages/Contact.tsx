@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Globe, Mail, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 const contacts = [
   { name: "Juan Luis Blanco Guzmán", role: "Lead Researcher", email: "jbguzman@us.es" },
@@ -15,9 +16,19 @@ const contacts = [
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
 
+  const sendMessage = trpc.contact.sendMessage.useMutation({
+    onSuccess: () => {
+      toast.success("Message sent successfully! We will get back to you soon.");
+      setForm({ name: "", email: "", subject: "", message: "" });
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to send message. Please try again.");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.warning("Email sending is not yet configured. Please contact us directly using the email addresses listed on the right.");
+    sendMessage.mutate(form);
   };
 
   return (
@@ -84,12 +95,8 @@ export default function Contact() {
                       required
                     />
                   </div>
-                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
-                    <span className="text-amber-500 mt-0.5">⚠</span>
-                    <span>Email sending requires SMTP configuration. Please contact us directly using the addresses on the right.</span>
-                  </div>
-                  <Button type="submit" className="w-full font-medium" disabled>
-                    Send Message (SMTP not configured)
+                  <Button type="submit" className="w-full font-medium" disabled={sendMessage.isPending}>
+                    {sendMessage.isPending ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               </div>

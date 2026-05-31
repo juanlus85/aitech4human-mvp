@@ -1295,6 +1295,39 @@ const researchLinesRouter = router({
     .mutation(({ input, ctx }) => leaveResearchLine(input.lineId, ctx.user.id)),
 });
 
+const contactRouter = router({
+  sendMessage: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        subject: z.string().min(1),
+        message: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await sendEmail({
+        to: "jbguzman@us.es",
+        subject: `[AI&Tech4Human Contact] ${input.subject}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #5b21b6;">New Contact Message — AI&amp;Tech4Human</h2>
+            <table style="width:100%; border-collapse:collapse; margin-top:16px;">
+              <tr><td style="padding:8px; font-weight:bold; background:#f5f3ff;">From</td><td style="padding:8px;">${input.name}</td></tr>
+              <tr><td style="padding:8px; font-weight:bold; background:#f5f3ff;">Email</td><td style="padding:8px;"><a href="mailto:${input.email}">${input.email}</a></td></tr>
+              <tr><td style="padding:8px; font-weight:bold; background:#f5f3ff;">Subject</td><td style="padding:8px;">${input.subject}</td></tr>
+            </table>
+            <div style="margin-top:16px; padding:16px; background:#fafafa; border-left:4px solid #5b21b6;">
+              <p style="white-space:pre-wrap; margin:0;">${input.message}</p>
+            </div>
+            <p style="margin-top:24px; font-size:12px; color:#888;">Sent via the AI&amp;Tech4Human contact form at research.blancoguzman.es</p>
+          </div>
+        `,
+      });
+      return { success: true };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -1315,5 +1348,6 @@ export const appRouter = router({
   links: linksRouter,
   projectProposals: projectProposalsRouter,
   researchLines: researchLinesRouter,
+  contact: contactRouter,
 });
 export type AppRouter = typeof appRouter;
