@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
-import { Camera, FileText, Save, Upload } from "lucide-react";
+import { Camera, FileText, Save, Upload, KeyRound } from "lucide-react";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -56,6 +56,16 @@ export default function Profile() {
 
   const [photoUploading, setPhotoUploading] = useState(false);
   const [cvUploading, setCvUploading] = useState(false);
+
+  // Change password
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+  const changePasswordMutation = trpc.users.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Password changed successfully.");
+      setPwForm({ current: "", next: "", confirm: "" });
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const photoRef = useRef<HTMLInputElement>(null);
   const cvRef = useRef<HTMLInputElement>(null);
@@ -269,6 +279,72 @@ export default function Profile() {
             {updateMutation.isPending ? "Saving..." : "Save Profile"}
           </Button>
         </form>
+
+        {/* Change Password */}
+        <div className="glass-card rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-primary" />
+            <h2 className="font-serif text-lg font-semibold text-foreground">Change Password</h2>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (pwForm.next !== pwForm.confirm) {
+                toast.error("New passwords do not match.");
+                return;
+              }
+              changePasswordMutation.mutate({ currentPassword: pwForm.current, newPassword: pwForm.next });
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="pw-current">Current password</Label>
+              <Input
+                id="pw-current"
+                type="password"
+                value={pwForm.current}
+                onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-new">New password <span className="text-muted-foreground text-xs">(min. 8 characters)</span></Label>
+                <Input
+                  id="pw-new"
+                  type="password"
+                  value={pwForm.next}
+                  onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
+                  minLength={8}
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-confirm">Confirm new password</Label>
+                <Input
+                  id="pw-confirm"
+                  type="password"
+                  value={pwForm.confirm}
+                  onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                  minLength={8}
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+            </div>
+            <Button
+              type="submit"
+              variant="outline"
+              className="gap-2 bg-white/60"
+              disabled={!pwForm.current || !pwForm.next || !pwForm.confirm || changePasswordMutation.isPending}
+            >
+              <KeyRound className="w-4 h-4" />
+              {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+            </Button>
+          </form>
+        </div>
       </div>
     </DashboardLayout>
   );

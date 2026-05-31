@@ -2,9 +2,9 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { systemRouter } from "./_core/systemRouter";
-import { loginUser, registerUser, getUserFromToken } from "./auth";
+import { loginUser, registerUser, getUserFromToken, hashPassword, verifyPassword } from "./auth";
 import {
-  getAllUsers, getUserById, updateUser, deleteUser,
+  getAllUsers, getUserById, updateUser, deleteUser, updateUserPassword,
   getProfileByUserId, upsertProfile, getAllPublicProfiles,
   getPublishedNews, getAllNews, getNewsBySlug, getNewsById, createNews, updateNews, deleteNews,
   getInboxForUser, getSentByUser, getMessageById, createMessage, markMessageRead,
@@ -148,7 +148,7 @@ const usersRouter = router({
         <tr>
           <td style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);padding:32px 40px;border-radius:12px 12px 0 0;">
             <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">AI&amp;Tech4Human</h1>
-            <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Research Group</p>
+            <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Research &amp; Innovation Group</p>
           </td>
         </tr>
         <!-- Body -->
@@ -156,7 +156,7 @@ const usersRouter = router({
           <td style="background:#ffffff;padding:40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
             <p style="margin:0 0 16px;color:#374151;font-size:15px;">Dear <strong>${user.name}</strong>,</p>
             <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-              Welcome to the <strong>AI&amp;Tech4Human Research Group</strong> collaboration platform. Your account has been created and you can now access the member area.
+              Welcome to the <strong>AI&amp;Tech4Human Research &amp; Innovation Group</strong> collaboration platform. Your account has been created and you can now access the member area.
             </p>
             <!-- Credentials box -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:24px 0;">
@@ -179,9 +179,9 @@ const usersRouter = router({
               </td></tr>
             </table>
             <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-              We recommend changing your password after your first login. If you have any questions, please do not hesitate to contact the group administrator.
+              You can change your password at any time from your <a href="https://research.blancoguzman.es/dashboard/profile" style="color:#6366f1;">profile settings</a> once logged in. If you have any questions, please do not hesitate to contact the Lead Researcher, Juan Luis Blanco Guzmán, at <a href="mailto:jbguzman@us.es" style="color:#6366f1;">jbguzman@us.es</a>.
             </p>
-            <p style="margin:24px 0 0;color:#374151;font-size:15px;">Best regards,<br /><strong>AI&amp;Tech4Human Research Group</strong></p>
+            <p style="margin:24px 0 0;color:#374151;font-size:15px;">Best regards,<br /><strong>AI&amp;Tech4Human Research &amp; Innovation Group</strong></p>
           </td>
         </tr>
         <!-- Footer -->
@@ -199,15 +199,28 @@ const usersRouter = router({
 </html>`;
       const sent = await sendEmail({
         to: user.email,
-        subject: "Welcome to AI&Tech4Human Research Group",
+        subject: "Welcome to AI&Tech4Human Research & Innovation Group",
         html,
-        text: `Dear ${user.name},\n\nWelcome to the AI&Tech4Human Research Group platform.\n\nWebsite: https://research.blancoguzman.es\nUsername: ${user.email}\nPassword: ${input.password}\n\nWe recommend changing your password after your first login.\n\nBest regards,\nAI&Tech4Human Research Group`,
+        text: `Dear ${user.name},\n\nWelcome to the AI&Tech4Human Research & Innovation Group collaboration platform. Your account has been created and you can now access the member area.\n\nWebsite: https://research.blancoguzman.es\nUsername: ${user.email}\nPassword: ${input.password}\n\nYou can change your password at any time from your profile settings (https://research.blancoguzman.es/dashboard/profile) once logged in. If you have any questions, please do not hesitate to contact the Lead Researcher, Juan Luis Blanco Guzmán, at jbguzman@us.es.\n\nBest regards,\nAI&Tech4Human Research & Innovation Group`,
       });
-      if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SMTP not configured or email failed. Please check Settings > SMTP." });
+            if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SMTP not configured or email failed. Please check Settings > SMTP." });
+      return { success: true };
+    }),
+  changePassword: protectedProcedure
+    .input(z.object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      const valid = await verifyPassword(input.currentPassword, user.passwordHash);
+      if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect" });
+      const newHash = await hashPassword(input.newPassword);
+      await updateUserPassword(user.id, newHash);
       return { success: true };
     }),
 });
-
 // ─── Profiles Router ──────────────────────────────────────────────────────────
 
 const profilesRouter = router({

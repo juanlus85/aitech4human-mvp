@@ -70,6 +70,11 @@ export async function updateUser(id: number, data: Partial<{ name: string; email
   await db.update(users).set(data).where(eq(users.id, id));
 }
 
+export async function updateUserPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+}
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) return;
