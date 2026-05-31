@@ -128,7 +128,7 @@ export default function ResearchLines() {
             <div>
               <h1 className="text-xl font-semibold text-foreground">Research Lines</h1>
               <p className="text-sm text-muted-foreground">
-                {lines.length} line{lines.length !== 1 ? "s" : ""} · Join lines to collaborate
+                {lines.length} line{lines.length !== 1 ? "s" : ""} · Join lines to collaborate or create new ones
               </p>
             </div>
           </div>
