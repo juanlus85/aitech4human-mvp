@@ -52,6 +52,7 @@ export const profiles = mysqlTable("profiles", {
   keywords: text("keywords"),
   languages: text("languages"),
   availableToCollaborate: boolean("availableToCollaborate").default(true),
+  showEmail: boolean("showEmail").default(false).notNull(),
   isPublic: boolean("isPublic").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

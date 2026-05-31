@@ -43,6 +43,13 @@
       "when": 1780053094024,
       "tag": "0005_first_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1780266663100,
+      "tag": "0006_loud_doctor_octopus",
+      "breakpoints": true
     }
   ]
 }

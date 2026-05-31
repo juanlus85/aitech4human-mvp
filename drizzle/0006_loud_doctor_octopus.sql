@@ -1,0 +1,1 @@
+ALTER TABLE `profiles` ADD `showEmail` boolean DEFAULT false NOT NULL;

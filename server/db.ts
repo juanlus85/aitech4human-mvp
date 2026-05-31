@@ -101,7 +101,7 @@ export async function upsertProfile(userId: number, data: Partial<typeof profile
   }
 }
 
-export async function getAllPublicProfiles() {
+export async function getAllPublicProfilesRaw() {
   const db = await getDb();
   if (!db) return [];
   return db
@@ -121,10 +121,19 @@ export async function getAllPublicProfiles() {
       keywords: profiles.keywords,
       cvPdfUrl: profiles.cvPdfUrl,
       availableToCollaborate: profiles.availableToCollaborate,
+      showEmail: profiles.showEmail,
     })
     .from(users)
     .leftJoin(profiles, eq(profiles.userId, users.id))
     .where(eq(users.isActive, true));
+}
+
+export async function getAllPublicProfilesMapped() {
+  const rows = await getAllPublicProfilesRaw();
+  return rows.map((r) => ({
+    ...r,
+    email: r.showEmail ? r.email : null,
+  }));
 }
 
 // ─── News ─────────────────────────────────────────────────────────────────────

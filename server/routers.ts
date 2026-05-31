@@ -5,7 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { loginUser, registerUser, getUserFromToken, hashPassword, verifyPassword } from "./auth";
 import {
   getAllUsers, getUserById, updateUser, deleteUser, updateUserPassword,
-  getProfileByUserId, upsertProfile, getAllPublicProfiles,
+  getProfileByUserId, upsertProfile, getAllPublicProfilesMapped,
   getPublishedNews, getAllNews, getNewsBySlug, getNewsById, createNews, updateNews, deleteNews,
   getInboxForUser, getSentByUser, getMessageById, createMessage, markMessageRead,
   getAttachmentsForMessage, createMessageAttachment,
@@ -224,7 +224,7 @@ const usersRouter = router({
 // ─── Profiles Router ──────────────────────────────────────────────────────────
 
 const profilesRouter = router({
-  publicList: publicProcedure.query(() => getAllPublicProfiles()),
+  publicList: publicProcedure.query(() => getAllPublicProfilesMapped()),
 
   publicGetByUserId: publicProcedure
     .input(z.object({ userId: z.number() }))
@@ -253,6 +253,7 @@ const profilesRouter = router({
       keywords: z.string().optional(),
       languages: z.string().optional(),
       availableToCollaborate: z.boolean().optional(),
+      showEmail: z.boolean().optional(),
       isPublic: z.boolean().optional(),
     }))
     .mutation(({ input, ctx }) => upsertProfile(ctx.user.id, input)),

@@ -20,7 +20,7 @@ export default function Profile() {
     bio: "", interests: "", university: "", department: "",
     researchArea: "", orcid: "", googleScholar: "", researchGate: "",
     scopus: "", webOfScience: "", linkedin: "", personalWeb: "",
-    keywords: "", languages: "", availableToCollaborate: false, isPublic: true,
+    keywords: "", languages: "", availableToCollaborate: false, showEmail: false, isPublic: true,
   });
 
   useEffect(() => {
@@ -41,6 +41,7 @@ export default function Profile() {
         keywords: profile.keywords ?? "",
         languages: profile.languages ?? "",
         availableToCollaborate: profile.availableToCollaborate ?? false,
+        showEmail: profile.showEmail ?? false,
         isPublic: profile.isPublic ?? true,
       });
     }
@@ -260,6 +261,16 @@ export default function Profile() {
               <Switch
                 checked={form.isPublic}
                 onCheckedChange={(v) => setForm({ ...form, isPublic: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Show email on public profile</p>
+                <p className="text-xs text-muted-foreground">Display your email address on the public members page</p>
+              </div>
+              <Switch
+                checked={form.showEmail}
+                onCheckedChange={(v) => setForm({ ...form, showEmail: v })}
               />
             </div>
             <div className="flex items-center justify-between">
