@@ -44,7 +44,7 @@ export default function Home() {
 
             <div className="accent-line mb-8 animate-fade-in-up" style={{ animationDelay: "80ms" }}>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-                An interdisciplinary European research group exploring how artificial intelligence and emerging technologies can be designed, deployed, and governed to genuinely serve human flourishing.
+                An international Ulysseus Research & Innovation Group bringing together researchers from across Europe to develop human-centred applications of Artificial Intelligence, Extended Reality, Eye Tracking, and Digital Innovation for societal wellbeing.
               </p>
             </div>
 
