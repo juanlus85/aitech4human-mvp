@@ -37,7 +37,7 @@ import {
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
-import { notifyMembers } from "./email";
+import { notifyMembers, sendEmail } from "./email";
 import { getAllUserEmails } from "./db";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -128,6 +128,84 @@ const usersRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(({ input }) => deleteUser(input.id)),
+  sendWelcomeEmail: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      password: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const user = await getUserById(input.userId);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);padding:32px 40px;border-radius:12px 12px 0 0;">
+            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">AI&amp;Tech4Human</h1>
+            <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Research Group</p>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="background:#ffffff;padding:40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+            <p style="margin:0 0 16px;color:#374151;font-size:15px;">Dear <strong>${user.name}</strong>,</p>
+            <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+              Welcome to the <strong>AI&amp;Tech4Human Research Group</strong> collaboration platform. Your account has been created and you can now access the member area.
+            </p>
+            <!-- Credentials box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:24px 0;">
+              <tr><td style="padding:20px 24px;">
+                <p style="margin:0 0 12px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Your access credentials</p>
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:4px 0;color:#6b7280;font-size:14px;width:100px;">Website:</td>
+                    <td style="padding:4px 0;"><a href="https://research.blancoguzman.es" style="color:#6366f1;font-size:14px;text-decoration:none;">research.blancoguzman.es</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;color:#6b7280;font-size:14px;">Username:</td>
+                    <td style="padding:4px 0;color:#111827;font-size:14px;font-weight:600;">${user.email}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;color:#6b7280;font-size:14px;">Password:</td>
+                    <td style="padding:4px 0;color:#111827;font-size:14px;font-weight:600;">${input.password}</td>
+                  </tr>
+                </table>
+              </td></tr>
+            </table>
+            <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+              We recommend changing your password after your first login. If you have any questions, please do not hesitate to contact the group administrator.
+            </p>
+            <p style="margin:24px 0 0;color:#374151;font-size:15px;">Best regards,<br /><strong>AI&amp;Tech4Human Research Group</strong></p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;padding:20px 40px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+              This email was sent to ${user.email} because an account was created for you on the AI&amp;Tech4Human platform.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+      const sent = await sendEmail({
+        to: user.email,
+        subject: "Welcome to AI&Tech4Human Research Group",
+        html,
+        text: `Dear ${user.name},\n\nWelcome to the AI&Tech4Human Research Group platform.\n\nWebsite: https://research.blancoguzman.es\nUsername: ${user.email}\nPassword: ${input.password}\n\nWe recommend changing your password after your first login.\n\nBest regards,\nAI&Tech4Human Research Group`,
+      });
+      if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SMTP not configured or email failed. Please check Settings > SMTP." });
+      return { success: true };
+    }),
 });
 
 // ─── Profiles Router ──────────────────────────────────────────────────────────

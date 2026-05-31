@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2, Shield, User } from "lucide-react";
+import { Plus, Pencil, Trash2, Shield, User, Mail } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function AdminUsers() {
@@ -28,6 +28,10 @@ export default function AdminUsers() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
   const [createForm, setCreateForm] = useState({ name: "", email: "", password: "", role: "member" as "admin" | "member" });
+
+  // Welcome email state
+  const [welcomeUser, setWelcomeUser] = useState<any>(null);
+  const [welcomePassword, setWelcomePassword] = useState("");
 
   const createMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
@@ -53,6 +57,15 @@ export default function AdminUsers() {
       utils.users.list.invalidate();
       toast.success("User deleted.");
     },
+  });
+
+  const welcomeEmailMutation = trpc.users.sendWelcomeEmail.useMutation({
+    onSuccess: () => {
+      toast.success(`Welcome email sent to ${welcomeUser?.email}`);
+      setWelcomeUser(null);
+      setWelcomePassword("");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   return (
@@ -148,6 +161,17 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
+                      {/* Send Welcome Email */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-primary hover:text-primary"
+                        title="Send welcome email"
+                        onClick={() => { setWelcomeUser(u); setWelcomePassword(""); }}
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                      </Button>
+                      {/* Edit */}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -156,6 +180,7 @@ export default function AdminUsers() {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
+                      {/* Delete */}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -220,6 +245,58 @@ export default function AdminUsers() {
                   {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Welcome Email dialog */}
+        <Dialog open={!!welcomeUser} onOpenChange={(o) => { if (!o) { setWelcomeUser(null); setWelcomePassword(""); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-serif flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
+                Send Welcome Email
+              </DialogTitle>
+            </DialogHeader>
+            {welcomeUser && (
+              <div className="space-y-4 mt-2">
+                <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide font-medium mb-2">Recipient</p>
+                  <p className="font-medium text-foreground">{welcomeUser.name}</p>
+                  <p className="text-muted-foreground">{welcomeUser.email}</p>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  A welcome email will be sent to <strong>{welcomeUser.email}</strong> with their login credentials.
+                  Please enter the password you assigned to this user so it can be included in the email.
+                </p>
+                <div className="space-y-1.5">
+                  <Label>User's password <span className="text-muted-foreground text-xs">(to include in the email)</span></Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter the password assigned to this user"
+                    value={welcomePassword}
+                    onChange={(e) => setWelcomePassword(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                  The email will include the website URL, username and this password in plain text.
+                  Make sure SMTP is configured in Settings before sending.
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" className="flex-1" onClick={() => { setWelcomeUser(null); setWelcomePassword(""); }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2"
+                    disabled={!welcomePassword || welcomeEmailMutation.isPending}
+                    onClick={() => welcomeEmailMutation.mutate({ userId: welcomeUser.id, password: welcomePassword })}
+                  >
+                    <Mail className="w-4 h-4" />
+                    {welcomeEmailMutation.isPending ? "Sending..." : "Send Email"}
+                  </Button>
+                </div>
+              </div>
             )}
           </DialogContent>
         </Dialog>
