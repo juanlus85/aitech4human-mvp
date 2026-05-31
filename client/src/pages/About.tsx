@@ -55,6 +55,12 @@ const universities = [
     flag: "🇲🇪",
     description: "The national university of Montenegro, contributing perspectives on technology adoption and societal impact in the Western Balkans.",
   },
+  {
+    name: "Technical University of Košice (TUKE)",
+    country: "Slovakia",
+    flag: "🇸🇰",
+    description: "A leading Slovak technical university, contributing expertise in engineering, information technologies, and applied research for industrial and societal innovation.",
+  },
 ];
 
 export default function About() {
