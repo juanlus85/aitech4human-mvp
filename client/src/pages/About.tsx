@@ -6,33 +6,33 @@ import { Globe, Target, Lightbulb, Users, BookOpen, Handshake } from "lucide-rea
 const objectives = [
   {
     icon: Target,
-    title: "Investigate Use Cases",
-    desc: "Explore where AI, XR, and eye-tracking can foster inclusion, accessibility, engagement, or wellbeing.",
+    title: "Advance Human-Centred AI Research",
+    desc: "Generate new knowledge on how Artificial Intelligence can improve wellbeing, decision-making, accessibility, and societal outcomes.",
   },
   {
     icon: Lightbulb,
-    title: "Pilot Applications",
-    desc: "Assess the feasibility, usability, and potential societal impact of technological applications.",
+    title: "Develop and Evaluate Emerging Technologies",
+    desc: "Design, test, and assess innovative applications of AI, XR, Eye Tracking, and related technologies in real-world contexts.",
   },
   {
     icon: Users,
-    title: "Build a Network",
-    desc: "Establish a strong network of researchers and stakeholders from at least three Ulysseus partner universities.",
+    title: "Foster International Collaboration",
+    desc: "Strengthen cooperation among researchers, institutions, and stakeholders across the Ulysseus ecosystem and beyond.",
   },
   {
     icon: BookOpen,
-    title: "Disseminate Knowledge",
-    desc: "Organise workshops, collaborative seminars, and open events for knowledge exchange.",
+    title: "Promote Knowledge Transfer and Education",
+    desc: "Deliver BIPs, COILs, workshops, seminars, and other educational initiatives that connect research, innovation, and learning.",
   },
   {
     icon: Handshake,
-    title: "Generate Outputs",
-    desc: "Produce outputs that support new proposals under Horizon Europe or Erasmus+.",
+    title: "Generate Scientific and Innovation Outputs",
+    desc: "Produce high-quality publications, conference contributions, collaborative projects, and competitive funding proposals.",
   },
   {
     icon: Globe,
-    title: "European Values",
-    desc: "Act as a catalyst for applied research aligned with social good, innovation, and European values.",
+    title: "Create Societal Impact",
+    desc: "Promote ethical, sustainable, and inclusive technological innovation that addresses societal challenges and supports European priorities.",
   },
 ];
 
