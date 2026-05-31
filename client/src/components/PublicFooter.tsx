@@ -49,6 +49,7 @@ export default function PublicFooter() {
                 "University of Seville",
                 "Haaga-Helia University of Applied Sciences",
                 "University of Montenegro",
+                "Technical University of Košice (TUKE)",
               ].map((uni) => (
                 <li key={uni} className="flex items-start gap-2">
                   <Globe className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
