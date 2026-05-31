@@ -19,11 +19,6 @@ export default function AdminUsers() {
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
-  if (!isAdmin) {
-    navigate("/dashboard");
-    return null;
-  }
-
   const { data: users, isLoading } = trpc.users.list.useQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
@@ -67,6 +62,12 @@ export default function AdminUsers() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  // Guard AFTER all hooks
+  if (!isAdmin) {
+    navigate("/dashboard");
+    return null;
+  }
 
   return (
     <DashboardLayout>

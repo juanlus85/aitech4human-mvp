@@ -64,7 +64,7 @@ export default function Home() {
               { icon: Users, label: "Researchers", value: members?.length ?? "11" },
               { icon: BookOpen, label: "Publications", value: "-" },
               { icon: CalendarDays, label: "Years active", value: "1" },
-              { icon: Globe, label: "Partner universities", value: "3" },
+              { icon: Globe, label: "Partner universities", value: "4" },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="glass-card rounded-xl p-5 bracket-corner animate-fade-in-up">
                 <Icon className="w-5 h-5 text-primary mb-2" />
