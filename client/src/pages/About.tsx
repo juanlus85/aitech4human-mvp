@@ -77,11 +77,13 @@ export default function About() {
 
           <div className="glass-card rounded-2xl p-8 md:p-10 line-accent">
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              The AI&Tech4Human group aims to explore and promote the use of emerging technologies — such as artificial intelligence, extended reality (XR), and eye-tracking — to improve quality of life across different areas, including education, health, tourism, and civic engagement.
+              AI&Tech4Human is a European research and innovation network dedicated to exploring how emerging technologies can improve people's lives and contribute to a more inclusive, sustainable, and human-centred society.
+
+Bringing together researchers from multiple Ulysseus partner universities, the group works at the intersection of Artificial Intelligence, Extended Reality (XR), Eye Tracking, Digital Accessibility, Sustainability, and Human Behaviour. Our activities combine research, education, and innovation to address real-world challenges in areas such as tourism, health, education, business, and civic engagement.
+
+Through international collaboration, joint educational initiatives, scientific research, and stakeholder engagement, AI&Tech4Human seeks to bridge technological advancement with societal needs. We believe that innovation should not only be technically advanced, but also ethical, accessible, sustainable, and designed to create positive impact for individuals and communities.
             </p>
-            <p className="text-base md:text-lg text-muted-foreground leading-relaxed mt-4">
-              The group conducts interdisciplinary research to investigate how these technologies can be applied in real contexts to generate positive social outcomes. It also considers their ethical and psychological implications, promoting a human-centred approach to innovation.
-            </p>
+
           </div>
         </div>
       </section>
