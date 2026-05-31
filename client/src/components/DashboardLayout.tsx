@@ -41,7 +41,6 @@ import {
   Megaphone,
   PanelLeft,
   Settings,
-  Sparkles,
   Trophy,
   User,
   Users,
@@ -79,7 +78,6 @@ const resourcesNav = [
   { icon: FileText, label: "Documents", path: "/dashboard/documents" },
   { icon: Link2, label: "Links", path: "/dashboard/links" },
   { icon: KanbanSquare, label: "Tasks", path: "/dashboard/tasks" },
-  { icon: Sparkles, label: "AI Assistant", path: "/dashboard/assistant" },
 ];
 
 const adminNav = [

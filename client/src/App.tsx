@@ -29,7 +29,6 @@ import Documents from "./pages/dashboard/Documents";
 import Links from "./pages/dashboard/Links";
 import Tasks from "./pages/dashboard/Tasks";
 import Notifications from "./pages/dashboard/Notifications";
-import Assistant from "./pages/dashboard/Assistant";
 import Calendar from "./pages/dashboard/Calendar";
 import ProjectProposals from "./pages/dashboard/ProjectProposals";
 import ResearchLines from "./pages/dashboard/ResearchLines";
@@ -64,7 +63,6 @@ function Router() {
       <Route path="/dashboard/links" component={Links} />
       <Route path="/dashboard/tasks" component={Tasks} />
       <Route path="/dashboard/notifications" component={Notifications} />
-      <Route path="/dashboard/assistant" component={Assistant} />
       <Route path="/dashboard/calendar" component={Calendar} />
       <Route path="/dashboard/project-proposals" component={ProjectProposals} />
       <Route path="/dashboard/research-lines" component={ResearchLines} />
