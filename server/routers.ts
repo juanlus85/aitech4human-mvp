@@ -179,7 +179,7 @@ const usersRouter = router({
               </td></tr>
             </table>
             <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-              You can change your password at any time from your <a href="https://research.blancoguzman.es/dashboard/profile" style="color:#6366f1;">profile settings</a> once logged in. If you have any questions, please do not hesitate to contact the Lead Researcher, Juan Luis Blanco Guzmán, at <a href="mailto:jbguzman@us.es" style="color:#6366f1;">jbguzman@us.es</a>.
+              You can change your password at any time from your <a href="https://research.blancoguzman.es/dashboard/profile" style="color:#6366f1;">profile settings</a> once logged in.
             </p>
             <p style="margin:24px 0 0;color:#374151;font-size:15px;">Best regards,<br /><strong>AI&amp;Tech4Human Research &amp; Innovation Group</strong></p>
           </td>
@@ -201,7 +201,7 @@ const usersRouter = router({
         to: user.email,
         subject: "Welcome to AI&Tech4Human Research & Innovation Group",
         html,
-        text: `Dear ${user.name},\n\nWelcome to the AI&Tech4Human Research & Innovation Group collaboration platform. Your account has been created and you can now access the member area.\n\nWebsite: https://research.blancoguzman.es\nUsername: ${user.email}\nPassword: ${input.password}\n\nYou can change your password at any time from your profile settings (https://research.blancoguzman.es/dashboard/profile) once logged in. If you have any questions, please do not hesitate to contact the Lead Researcher, Juan Luis Blanco Guzmán, at jbguzman@us.es.\n\nBest regards,\nAI&Tech4Human Research & Innovation Group`,
+        text: `Dear ${user.name},\n\nWelcome to the AI&Tech4Human Research & Innovation Group collaboration platform. Your account has been created and you can now access the member area.\n\nWebsite: https://research.blancoguzman.es\nUsername: ${user.email}\nPassword: ${input.password}\n\nYou can change your password at any time from your profile settings (https://research.blancoguzman.es/dashboard/profile) once logged in.\n\nBest regards,\nAI&Tech4Human Research & Innovation Group`,
       });
             if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SMTP not configured or email failed. Please check Settings > SMTP." });
       return { success: true };
