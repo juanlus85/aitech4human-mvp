@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
 import { Plus, Paperclip, Send, Reply, ReplyAll, Inbox, SendHorizonal, Download, UsersRound, Trash2 } from "lucide-react";
 
@@ -318,7 +318,7 @@ export default function Messages() {
 
         {/* Compose dialog */}
         <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90dvh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
             <DialogHeader><DialogTitle className="font-serif">New Message</DialogTitle></DialogHeader>
             <form
               onSubmit={(e) => {
@@ -335,7 +335,7 @@ export default function Messages() {
                   })),
                 });
               }}
-              className="space-y-4 mt-2"
+              className="mt-2 flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
@@ -344,7 +344,7 @@ export default function Messages() {
                     <UsersRound className="w-3.5 h-3.5 mr-1" />{allRecipientsSelected ? "Clear all" : "Select all"}
                   </Button>
                 </div>
-                <div className="max-h-48 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40 bg-muted/10">
+                <div className="max-h-36 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40 bg-muted/10">
                   {recipients?.map((recipient) => {
                     const checked = composeForm.recipientIds.includes(recipient.id);
                     return (
@@ -367,13 +367,13 @@ export default function Messages() {
                 <Label>Subject</Label>
                 <Input value={composeForm.subject} onChange={(e) => setComposeForm({ ...composeForm, subject: e.target.value })} required />
               </div>
-              <div className="space-y-1.5">
+              <div className="flex flex-1 min-h-0 flex-col gap-1.5">
                 <Label>Message</Label>
                 <Textarea
                   value={composeForm.body}
                   onChange={(e) => setComposeForm({ ...composeForm, body: e.target.value })}
-                  rows={9}
-                  className="min-h-52 sm:min-h-60 resize-y"
+                  rows={14}
+                  className="flex-1 min-h-[16rem] resize-y"
                   required
                 />
               </div>
@@ -402,7 +402,7 @@ export default function Messages() {
 
         {/* Reply dialog */}
         <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90dvh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
             <DialogHeader><DialogTitle className="font-serif">Reply</DialogTitle></DialogHeader>
             {!selectedMsg ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Loading message details…</p>
@@ -419,7 +419,7 @@ export default function Messages() {
                   parentId: selectedMsg.id,
                 });
               }}
-              className="space-y-4 mt-2"
+              className="mt-2 flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto"
             >
               <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{replyMode === "all" ? "Replying to all" : "Replying to"}</p>
@@ -440,8 +440,8 @@ export default function Messages() {
               <Textarea
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
-                rows={9}
-                className="min-h-52 sm:min-h-60 resize-y"
+                rows={14}
+                className="flex-1 min-h-[16rem] resize-y"
                 placeholder="Write your reply..."
                 required
               />

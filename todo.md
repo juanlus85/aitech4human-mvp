@@ -176,3 +176,7 @@
 - [x] Añadir prueba de interfaz para abrir un mensaje desde una notificación web
 - [x] Añadir prueba de integración que confirme que el borrado oculta el mensaje solo al usuario que lo eliminó
 - [x] Aumentar el espacio de escritura por defecto en composición y respuesta de mensajes
+- [x] Hacer que el editor de mensajes ocupe casi todo el alto disponible por defecto
+- [x] Convertir el diálogo de mensajes en layout de altura completa con el editor ocupando la mayor parte del espacio
+- [x] Verificar visualmente el editor de gran altura en escritorio y móvil mediante prueba de interfaz
+- [ ] Verificar visualmente el compositor y la respuesta de gran altura en una sesión autenticada de escritorio y móvil
