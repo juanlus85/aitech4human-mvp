@@ -2,7 +2,7 @@ import { aliasedTable, and, asc, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
-  users, profiles, news, messages, messageRecipients, messageAttachments,
+  users, profiles, news, messages, messageRecipients, messageDeletions, messageAttachments,
   meetings, meetingAttendance, meetingDateOptions, meetingDateVotes,
   congresses, commProposals, commProposalInterests, commProposalAttendance,
   papers, paperContributors,
@@ -203,7 +203,11 @@ export async function getMessagesForUser(userId: number) {
     .select()
     .from(messages)
     .leftJoin(messageRecipients, eq(messageRecipients.messageId, messages.id))
-    .where(sql`${messageRecipients.userId} = ${userId} OR ${messages.senderId} = ${userId}`)
+    .where(sql`(${messageRecipients.userId} = ${userId} OR ${messages.senderId} = ${userId})
+      AND NOT EXISTS (
+        SELECT 1 FROM ${messageDeletions}
+        WHERE ${messageDeletions.messageId} = ${messages.id} AND ${messageDeletions.userId} = ${userId}
+      )`)
     .orderBy(desc(messages.createdAt));
 }
 
@@ -230,7 +234,13 @@ export async function getInboxForUser(userId: number) {
     .innerJoin(messageRecipients, eq(messageRecipients.messageId, messages.id))
     .leftJoin(senderAlias, eq(senderAlias.id, messages.senderId))
     .leftJoin(recipientAlias, eq(recipientAlias.id, messageRecipients.userId))
-    .where(eq(messageRecipients.userId, userId))
+    .where(and(
+      eq(messageRecipients.userId, userId),
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${messageDeletions}
+        WHERE ${messageDeletions.messageId} = ${messages.id} AND ${messageDeletions.userId} = ${userId}
+      )`,
+    ))
     .orderBy(desc(messages.createdAt));
   return rows;
 }
@@ -250,7 +260,13 @@ export async function getSentByUser(userId: number) {
     })
     .from(messages)
     .leftJoin(senderAlias, eq(senderAlias.id, messages.senderId))
-    .where(eq(messages.senderId, userId))
+    .where(and(
+      eq(messages.senderId, userId),
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${messageDeletions}
+        WHERE ${messageDeletions.messageId} = ${messages.id} AND ${messageDeletions.userId} = ${userId}
+      )`,
+    ))
     .orderBy(desc(messages.createdAt));
   return Promise.all(rows.map(async (message) => {
     const recipients = await getMessageRecipients(message.id);
@@ -305,6 +321,24 @@ export async function markMessageRead(messageId: number, userId: number) {
   await db.update(messageRecipients)
     .set({ isRead: true })
     .where(and(eq(messageRecipients.messageId, messageId), eq(messageRecipients.userId, userId)));
+}
+
+export async function isMessageDeletedForUser(messageId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: messageDeletions.id })
+    .from(messageDeletions)
+    .where(and(eq(messageDeletions.messageId, messageId), eq(messageDeletions.userId, userId)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** Hides a message only from one participant's Inbox/Sent view. */
+export async function deleteMessageForUser(messageId: number, userId: number) {
+  const db = await getDb();
+  if (!db || await isMessageDeletedForUser(messageId, userId)) return;
+  await db.insert(messageDeletions).values({ messageId, userId });
 }
 
 export async function getAttachmentsForMessage(messageId: number) {

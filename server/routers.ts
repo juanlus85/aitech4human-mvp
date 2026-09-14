@@ -7,7 +7,7 @@ import {
   getAllUsers, getActiveMessageRecipients, getUserById, updateUser, deleteUser, updateUserPassword,
   getProfileByUserId, upsertProfile, getAllPublicProfilesMapped,
   getPublishedNews, getAllNews, getNewsBySlug, getNewsById, createNews, updateNews, deleteNews,
-  getInboxForUser, getSentByUser, getMessageById, createMessage, createMessageRecipients, getMessageRecipients, markMessageRead,
+  getInboxForUser, getSentByUser, getMessageById, createMessage, createMessageRecipients, getMessageRecipients, markMessageRead, isMessageDeletedForUser, deleteMessageForUser,
   getAttachmentsForMessage, createMessageAttachment,
   getAllMeetings, getMeetingById, createMeeting, updateMeeting, deleteMeeting,
   getMeetingAttendance, upsertAttendance, getMeetingDateOptions, createDateOption,
@@ -348,6 +348,9 @@ const messagesRouter = router({
       if (msg.senderId !== ctx.user.id && !isRecipient) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+      if (await isMessageDeletedForUser(input.id, ctx.user.id)) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "This message has been removed from your mailbox." });
+      }
       if (isRecipient && !recipients.find((recipient) => recipient.userId === ctx.user.id)?.isRead) {
         await markMessageRead(input.id, ctx.user.id);
       }
@@ -360,6 +363,18 @@ const messagesRouter = router({
         senderName: sender?.name ?? null,
         recipientName: recipients[0]?.name ?? null,
       };
+    }),
+
+  remove: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const msg = await getMessageById(input.id);
+      if (!msg) throw new TRPCError({ code: "NOT_FOUND" });
+      const recipients = await getMessageRecipients(input.id);
+      const isParticipant = msg.senderId === ctx.user.id || recipients.some((recipient) => recipient.userId === ctx.user.id);
+      if (!isParticipant) throw new TRPCError({ code: "FORBIDDEN" });
+      await deleteMessageForUser(input.id, ctx.user.id);
+      return { success: true };
     }),
 
   send: protectedProcedure

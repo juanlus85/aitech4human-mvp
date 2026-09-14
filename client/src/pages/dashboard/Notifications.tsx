@@ -1,10 +1,13 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import React from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Bell, CheckCheck, Mail, CalendarDays, BookOpen, Trophy, Globe, FileText, Flag } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
+import { getNotificationNavigationTarget } from "@/lib/notificationNavigation";
 
 const TYPE_ICONS: Record<string, any> = {
   message: Mail,
@@ -19,6 +22,7 @@ const TYPE_ICONS: Record<string, any> = {
 
 export default function Notifications() {
   const utils = trpc.useUtils();
+  const [, navigate] = useLocation();
   const { data: notifications, isLoading } = trpc.notifications.list.useQuery();
 
   const markReadMutation = trpc.notifications.markRead.useMutation({
@@ -33,6 +37,11 @@ export default function Notifications() {
   });
 
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
+  const openNotification = (notification: NonNullable<typeof notifications>[number]) => {
+    if (!notification.isRead) markReadMutation.mutate({ id: notification.id });
+    const target = getNotificationNavigationTarget(notification);
+    if (target) navigate(target);
+  };
 
   return (
     <DashboardLayout>
@@ -65,8 +74,16 @@ export default function Notifications() {
               return (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 p-4 transition-colors ${!n.isRead ? "bg-primary/5" : "hover:bg-muted/30"}`}
-                  onClick={() => !n.isRead && markReadMutation.mutate({ id: n.id })}
+                  role={getNotificationNavigationTarget(n) ? "button" : undefined}
+                  tabIndex={getNotificationNavigationTarget(n) ? 0 : undefined}
+                  className={`flex items-start gap-3 p-4 transition-colors ${!n.isRead ? "bg-primary/5" : "hover:bg-muted/30"} ${getNotificationNavigationTarget(n) ? "cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary" : ""}`}
+                  onClick={() => openNotification(n)}
+                  onKeyDown={(event) => {
+                    if ((event.key === "Enter" || event.key === " ") && getNotificationNavigationTarget(n)) {
+                      event.preventDefault();
+                      openNotification(n);
+                    }
+                  }}
                 >
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${!n.isRead ? "bg-primary/15" : "bg-muted"}`}>
                     <Icon className={`w-4 h-4 ${!n.isRead ? "text-primary" : "text-muted-foreground"}`} />

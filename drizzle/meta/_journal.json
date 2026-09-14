@@ -57,6 +57,13 @@
       "when": 1789374069878,
       "tag": "0007_blue_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1789375434239,
+      "tag": "0008_smiling_emma_frost",
+      "breakpoints": true
     }
   ]
 }

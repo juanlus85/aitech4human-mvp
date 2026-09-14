@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
-import { Plus, Paperclip, Send, Reply, ReplyAll, Inbox, SendHorizonal, Download, UsersRound } from "lucide-react";
+import { Plus, Paperclip, Send, Reply, ReplyAll, Inbox, SendHorizonal, Download, UsersRound, Trash2 } from "lucide-react";
 
 export default function Messages() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ export default function Messages() {
   const [composeForm, setComposeForm] = useState({ recipientIds: [] as number[], subject: "", body: "" });
   const [replyBody, setReplyBody] = useState("");
   const [replyMode, setReplyMode] = useState<"sender" | "all">("sender");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; subject: string } | null>(null);
   const attachRef = useRef<HTMLInputElement>(null);
   const [pendingAttachments, setPendingAttachments] = useState<{ name: string; base64: string; mimeType: string; size: number }[]>([]);
 
@@ -66,6 +68,21 @@ export default function Messages() {
       toast.success("Reply sent.");
     },
     onError: (e) => toast.error(e.message),
+  });
+
+  const removeMutation = trpc.messages.remove.useMutation({
+    onSuccess: (_data, variables) => {
+      utils.messages.inbox.invalidate();
+      utils.messages.sent.invalidate();
+      utils.messages.getById.invalidate({ id: variables.id });
+      if (selectedId === variables.id) {
+        setSelectedId(null);
+        setReplyOpen(false);
+      }
+      setDeleteTarget(null);
+      toast.success("Message removed from your mailbox.");
+    },
+    onError: (error) => toast.error(error.message),
   });
 
   const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,24 +180,37 @@ export default function Messages() {
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{msg.subject}</p>
                         {isUnread && <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1" />}
                       </div>
-                      {msg.senderId !== user?.id && (
+                      <div className="flex shrink-0 gap-0.5">
+                        {msg.senderId !== user?.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                            aria-label={`Reply to ${msg.senderName ?? "sender"}`}
+                            title="Reply"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedId(msg.id);
+                              setReplyMode("sender");
+                              setReplyOpen(true);
+                            }}
+                          >
+                            <Reply className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 shrink-0 text-primary hover:text-primary hover:bg-primary/10"
-                          aria-label={`Reply to ${msg.senderName ?? "sender"}`}
-                          title="Reply"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedId(msg.id);
-                            setReplyMode("sender");
-                            setReplyOpen(true);
-                          }}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          aria-label={`Delete ${msg.subject}`}
+                          title="Delete from Inbox"
+                          onClick={(event) => { event.stopPropagation(); setDeleteTarget({ id: msg.id, subject: msg.subject }); }}
                         >
-                          <Reply className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -207,6 +237,17 @@ export default function Messages() {
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{msg.subject}</p>
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      aria-label={`Delete ${msg.subject}`}
+                      title="Delete from Sent"
+                      onClick={(event) => { event.stopPropagation(); setDeleteTarget({ id: msg.id, subject: msg.subject }); }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 ))}
               </TabsContent>
@@ -234,18 +275,23 @@ export default function Messages() {
                       To: {selectedMsg.recipients?.map((recipient: any) => recipient.name).join(", ") || "Unknown"}
                     </p>
                   </div>
-                  {allReplyRecipientIds.length > 0 && (
-                    <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
-                      <Button variant="outline" size="sm" className="gap-1.5 bg-white/60" onClick={() => { setReplyMode("sender"); setReplyOpen(true); }}>
-                        <Reply className="w-3.5 h-3.5" />Reply
-                      </Button>
-                      {allReplyRecipientIds.length > 1 && (
-                        <Button variant="outline" size="sm" className="gap-1.5 bg-white/60" onClick={() => { setReplyMode("all"); setReplyOpen(true); }}>
-                          <ReplyAll className="w-3.5 h-3.5" />Reply all
+                  <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
+                    {allReplyRecipientIds.length > 0 && (
+                      <>
+                        <Button variant="outline" size="sm" className="gap-1.5 bg-white/60" onClick={() => { setReplyMode("sender"); setReplyOpen(true); }}>
+                          <Reply className="w-3.5 h-3.5" />Reply
                         </Button>
-                      )}
-                    </div>
-                  )}
+                        {allReplyRecipientIds.length > 1 && (
+                          <Button variant="outline" size="sm" className="gap-1.5 bg-white/60" onClick={() => { setReplyMode("all"); setReplyOpen(true); }}>
+                            <ReplyAll className="w-3.5 h-3.5" />Reply all
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ id: selectedMsg.id, subject: selectedMsg.subject })}>
+                      <Trash2 className="w-3.5 h-3.5" />Delete
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-5">
                   <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{selectedMsg.body}</p>
@@ -401,6 +447,30 @@ export default function Messages() {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove this message?</AlertDialogTitle>
+              <AlertDialogDescription>
+                “{deleteTarget?.subject}” will be removed only from your own mailbox. Other participants will keep their copies.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={removeMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={removeMutation.isPending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (deleteTarget) removeMutation.mutate({ id: deleteTarget.id });
+                }}
+              >
+                {removeMutation.isPending ? "Removing…" : "Remove message"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

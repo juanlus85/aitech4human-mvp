@@ -169,3 +169,9 @@
 - [x] Añadir pruebas de mensajería multidestinatario y verificar visualmente los puntos de corte responsive
 - [x] Corregir el script de migración Plesk para omitir mensajes históricos con destinatarios eliminados
 - [x] Añadir una acción de respuesta directa y visible en cada mensaje recibido del inbox
+- [x] Permitir eliminar un mensaje de Inbox o Sent sin borrar la copia de otros participantes
+- [x] Verificar la entrega de avisos SMTP cuando se recibe un mensaje privado — confirmada por el usuario
+- [x] Abrir el mensaje relacionado al pulsar una notificación web de tipo mensaje
+- [x] Añadir pruebas de borrado de mensajes, entrega de avisos y navegación desde notificaciones
+- [x] Añadir prueba de interfaz para abrir un mensaje desde una notificación web
+- [x] Añadir prueba de integración que confirme que el borrado oculta el mensaje solo al usuario que lo eliminó
