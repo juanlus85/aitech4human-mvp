@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -40,7 +39,6 @@ export default function Meetings() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", description: "", modality: "online" as "online" | "in-person" | "hybrid", location: "", meetingLink: "", agenda: "", status: "scheduled" as "scheduled" | "cancelled" | "completed" });
-  const [notifyEmail, setNotifyEmail] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -126,7 +124,7 @@ export default function Meetings() {
       if (form.pollDeadlineStr) payload.pollDeadline = new Date(form.pollDeadlineStr);
       payload.dateOptions = form.dateOptionStrs.filter(Boolean).map((s) => new Date(s));
     }
-    createMutation.mutate({ ...payload, notifyEmail });
+    createMutation.mutate(payload);
   };
 
   const updateMutation = trpc.meetings.update.useMutation({
@@ -279,12 +277,6 @@ export default function Meetings() {
               <div className="space-y-1.5">
                 <Label>Description</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Checkbox id="notifyEmailMeeting" checked={notifyEmail} onCheckedChange={(v) => setNotifyEmail(!!v)} />
-                <Label htmlFor="notifyEmailMeeting" className="cursor-pointer text-sm font-normal text-muted-foreground">
-                  Notify members by email
-                </Label>
               </div>
               <Button className="w-full" onClick={handleCreate} disabled={!form.title || createMutation.isPending}>
                 {createMutation.isPending ? "Creating..." : "Create Meeting"}

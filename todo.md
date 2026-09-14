@@ -152,3 +152,12 @@
 - [x] Show who is interested in each Conference proposal
 - [x] Rename "Papers" → "Paper Proposals" throughout UI and sidebar
 - [x] Create Project Proposals section (schema, backend, frontend, sidebar nav)
+- [x] Enviar por SMTP un email completo a los destinatarios cuando reciban un mensaje, con enlace directo para verlo y responder en la plataforma
+- [x] Enviar por SMTP a los usuarios destinatarios los avisos de notificaciones generales con su contenido completo y enlace directo a la plataforma
+- [x] Conservar el enlace de destino al iniciar sesión desde un correo de aviso
+- [x] Añadir pruebas de los flujos de avisos por correo de mensajes y notificaciones
+- [x] Incluir los adjuntos del mensaje en el aviso por correo mediante un listado enlazado después de la subida
+- [x] Centralizar el envío de email para toda notificación interna creada por el sistema
+- [x] Añadir pruebas de integración para mensajes, notificaciones internas y retorno al destino tras el login
+- [x] Añadir pruebas de router para mensajes con adjuntos, reuniones y retorno de login desde enlaces de correo
+- [x] Añadir prueba de interfaz del login para comprobar el retorno efectivo al mensaje enlazado desde el correo

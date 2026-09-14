@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
 import { Plus, Paperclip, Send, Reply, Inbox, SendHorizonal, Download } from "lucide-react";
 
@@ -26,6 +26,14 @@ export default function Messages() {
   const attachRef = useRef<HTMLInputElement>(null);
   const [pendingAttachments, setPendingAttachments] = useState<{ name: string; base64: string; mimeType: string; size: number }[]>([]);
 
+  useEffect(() => {
+    const messageParam = new URLSearchParams(window.location.search).get("message");
+    const messageId = Number(messageParam);
+    if (Number.isInteger(messageId) && messageId > 0) {
+      setSelectedId(messageId);
+    }
+  }, []);
+
   const { data: inbox } = trpc.messages.inbox.useQuery();
   const { data: sent } = trpc.messages.sent.useQuery();
   const { data: selectedMsg } = trpc.messages.getById.useQuery(
@@ -35,21 +43,9 @@ export default function Messages() {
   const { data: members } = trpc.profiles.publicList.useQuery();
 
   const sendMutation = trpc.messages.send.useMutation({
-    onSuccess: async (msg) => {
+    onSuccess: () => {
       utils.messages.inbox.invalidate();
       utils.messages.sent.invalidate();
-      // Upload attachments if any
-      for (const att of pendingAttachments) {
-        if (msg?.id) {
-          await uploadAttachmentMutation.mutateAsync({
-            messageId: msg.id,
-            base64: att.base64,
-            fileName: att.name,
-            mimeType: att.mimeType,
-            fileSize: att.size,
-          });
-        }
-      }
       setComposeOpen(false);
       setComposeForm({ recipientId: "", subject: "", body: "" });
       setPendingAttachments([]);
@@ -57,8 +53,6 @@ export default function Messages() {
     },
     onError: (e) => toast.error(e.message),
   });
-
-  const uploadAttachmentMutation = trpc.messages.uploadAttachment.useMutation();
 
   const replyMutation = trpc.messages.send.useMutation({
     onSuccess: () => {
@@ -224,6 +218,12 @@ export default function Messages() {
                   recipientId: parseInt(composeForm.recipientId),
                   subject: composeForm.subject,
                   body: composeForm.body,
+                  attachments: pendingAttachments.map((attachment) => ({
+                    base64: attachment.base64,
+                    fileName: attachment.name,
+                    mimeType: attachment.mimeType,
+                    fileSize: attachment.size,
+                  })),
                 });
               }}
               className="space-y-4 mt-2"

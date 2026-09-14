@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
+import { getLoginPathForCurrentLocation } from "@/lib/navigation";
 import {
   Bell,
   BookOpen,
@@ -109,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               Access is restricted to group members. Please sign in to continue.
             </p>
           </div>
-          <Link href="/login">
+          <Link href={getLoginPathForCurrentLocation(window.location)}>
             <Button size="lg" className="w-full font-medium">Sign In</Button>
           </Link>
           <Link href="/">

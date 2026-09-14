@@ -22,7 +22,7 @@ import {
   getAllDocuments, getDocumentById, createDocument, deleteDocument,
   getAllFolders, createFolder,
   getAllTasks, createTask, updateTask, deleteTask,
-  getNotificationsForUser, createNotification, markNotificationRead,
+  getNotificationsForUser, markNotificationRead,
   markAllNotificationsRead, getUnreadNotificationCount,
   getAllAnnouncements, getAnnouncementById, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
@@ -37,8 +37,9 @@ import {
 } from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
-import { notifyMembers, sendEmail } from "./email";
+import { getPlatformUrl, notifyMembers, sendEmail } from "./email";
 import { getAllUserEmails } from "./db";
+import { createAndEmailNotification } from "./notificationEmail";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -361,17 +362,46 @@ const messagesRouter = router({
       subject: z.string().min(1),
       body: z.string().min(1),
       parentId: z.number().optional(),
+      attachments: z.array(z.object({
+        base64: z.string(),
+        fileName: z.string(),
+        mimeType: z.string(),
+        fileSize: z.number().optional(),
+      })).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const msg = await createMessage({ ...input, senderId: ctx.user.id });
+      const { attachments = [], ...messageData } = input;
+      const msg = await createMessage({ ...messageData, senderId: ctx.user.id });
       if (msg) {
-        await createNotification({
+        const uploadedAttachments: Array<{ fileName: string; fileUrl: string }> = [];
+        for (const attachment of attachments) {
+          const buffer = Buffer.from(attachment.base64, "base64");
+          const key = `messages/${msg.id}/${Date.now()}-${attachment.fileName}`;
+          const { url } = await storagePut(key, buffer, attachment.mimeType);
+          await createMessageAttachment({
+            messageId: msg.id,
+            fileName: attachment.fileName,
+            fileKey: key,
+            fileUrl: url,
+            fileSize: attachment.fileSize,
+            mimeType: attachment.mimeType,
+          });
+          uploadedAttachments.push({ fileName: attachment.fileName, fileUrl: url });
+        }
+        await createAndEmailNotification({
           userId: input.recipientId,
           type: "message",
           title: "New message",
           body: `You have a new message: "${input.subject}"`,
           relatedModule: "messages",
           relatedId: msg.id,
+        }, {
+          kind: "message",
+          senderName: ctx.user.name,
+          subject: input.subject,
+          messageBody: input.body,
+          messageId: msg.id,
+          attachments: uploadedAttachments,
         });
       }
       return msg;
@@ -436,41 +466,36 @@ const meetingsRouter = router({
       fixedDate: z.coerce.date().optional(),
       pollDeadline: z.coerce.date().optional(),
       dateOptions: z.array(z.coerce.date()).optional(),
-      notifyEmail: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { dateOptions, notifyEmail, ...meetingData } = input;
+      const { dateOptions, ...meetingData } = input;
       const meeting = await createMeeting({ ...meetingData, organizerId: ctx.user.id });
       if (meeting && input.type === "poll" && dateOptions) {
         for (const d of dateOptions) {
           await createDateOption(meeting.id, d);
         }
       }
+      const meetingEmailBody = [
+        input.type === "fixed" && input.fixedDate ? `Date and time: ${new Date(input.fixedDate).toLocaleString()}` : "",
+        input.type === "poll" && input.pollDeadline ? `Date poll deadline: ${new Date(input.pollDeadline).toLocaleString()}` : "",
+        input.type === "poll" && dateOptions?.length ? `Proposed dates: ${dateOptions.map((date) => new Date(date).toLocaleString()).join("; ")}` : "",
+        `Modality: ${input.modality}`,
+        input.location ? `Location: ${input.location}` : "",
+        input.meetingLink ? `Meeting link: ${input.meetingLink}` : "",
+        input.agenda ? `Agenda: ${input.agenda}` : "",
+        input.description ? `Description: ${input.description}` : "",
+      ].filter(Boolean).join("\n\n");
       const allUsers = await getAllUsers();
       for (const u of allUsers) {
         if (u.id !== ctx.user.id) {
-          await createNotification({
+          await createAndEmailNotification({
             userId: u.id,
             type: "meeting",
             title: "New meeting created",
-            body: `"${input.title}" has been scheduled`,
+            body: `"${input.title}" has been scheduled.\n\n${meetingEmailBody}`,
             relatedModule: "meetings",
             relatedId: meeting?.id,
-          });
-        }
-      }
-            if (notifyEmail && meeting) {
-        try {
-          const emails = await getAllUserEmails();
-          const dateStr = input.fixedDate ? new Date(input.fixedDate).toLocaleString() : "TBD (date poll)";
-          await notifyMembers({
-            subject: `New Meeting: ${input.title}`,
-            title: `New Meeting: ${input.title}`,
-            body: `Date: ${dateStr}\nModality: ${input.modality}${input.location ? `\nLocation: ${input.location}` : ""}${input.agenda ? `\nAgenda: ${input.agenda}` : ""}`,
-            memberEmails: emails,
-          });
-        } catch (err) {
-          console.error("[Email] Failed to send meeting notification:", err);
+          }, { kind: "notification", link: getPlatformUrl("/dashboard/meetings") });
         }
       }
       return meeting;
@@ -590,6 +615,7 @@ const congressesRouter = router({
             result.websiteUrl ? `Website: ${result.websiteUrl}` : "",
             result.description ? `\n${result.description}` : "",
           ].filter(Boolean).join("\n"),
+          link: getPlatformUrl("/dashboard/congresses"),
           memberEmails: emails,
         });
       }
@@ -711,6 +737,7 @@ const papersRouter = router({
             result.keywords ? `Keywords: ${result.keywords}` : "",
             result.abstract ? `\n${result.abstract}` : "",
           ].filter(Boolean).join("\n"),
+          link: getPlatformUrl("/dashboard/papers"),
           memberEmails: emails,
         });
       }
@@ -798,6 +825,7 @@ const eventsRouter = router({
             result.websiteUrl ? `Website: ${result.websiteUrl}` : "",
             result.description ? `\n${result.description}` : "",
           ].filter(Boolean).join("\n"),
+          link: getPlatformUrl("/dashboard/events"),
           memberEmails: emails,
         });
       }
@@ -1085,6 +1113,7 @@ const announcementsRouter = router({
           subject: `Announcement: ${result.subject}`,
           title: result.subject,
           body: result.body,
+          link: getPlatformUrl("/dashboard/announcements"),
           memberEmails: emails,
         });
       }

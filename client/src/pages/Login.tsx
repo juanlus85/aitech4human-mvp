@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { getSafeDashboardReturnPath } from "@/lib/navigation";
 
 export default function Login() {
   const [, navigate] = useLocation();
+  const nextPath = getSafeDashboardReturnPath(window.location.search);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +21,7 @@ export default function Login() {
     onSuccess: async () => {
       await utils.auth.me.invalidate();
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(nextPath);
     },
     onError: (err) => {
       toast.error(err.message || "Invalid credentials. Please try again.");
