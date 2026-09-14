@@ -18,7 +18,7 @@ vi.mock("nodemailer", () => ({
   },
 }));
 
-import { notifyMembers, sendMessageEmail } from "./email";
+import { getPublicAssetUrl, getPlatformUrl, notifyMembers, sendMessageEmail } from "./email";
 
 describe("email notifications", () => {
   beforeEach(() => {
@@ -44,6 +44,29 @@ describe("email notifications", () => {
     expect(payload.html).toContain("First line<br />Second line &lt;script&gt;");
     expect(payload.html).toContain("https://research.blancoguzman.es/dashboard/messages?message=42");
     expect(payload.text).toContain("First line\nSecond line <script>");
+    expect(payload.from).toBe("AI&Tech4Human <mailer@example.org>");
+    expect(payload.replyTo).toBe("mailer@example.org");
+    expect(payload.messageId).toMatch(/^<.+@example\.org>$/);
+    expect(payload.headers["X-Auto-Response-Suppress"]).toBe("All");
+  });
+
+  it("converts relative platform and attachment URLs into absolute production URLs", async () => {
+    expect(getPlatformUrl("/dashboard/messages?message=42")).toBe("https://research.blancoguzman.es/dashboard/messages?message=42");
+    expect(getPublicAssetUrl("/uploads/messages/20-example.pdf")).toBe("https://research.blancoguzman.es/uploads/messages/20-example.pdf");
+    expect(getPublicAssetUrl("https://cdn.example.org/file.pdf")).toBe("https://cdn.example.org/file.pdf");
+
+    await sendMessageEmail({
+      to: "recipient@example.org",
+      senderName: "Ada",
+      subject: "Attachment test",
+      body: "Please review the file.",
+      messageId: 43,
+      attachments: [{ fileName: "example.pdf", fileUrl: "/uploads/messages/20-example.pdf" }],
+    });
+
+    const payload = sendMail.mock.calls[0]?.[0];
+    expect(payload.html).toContain("https://research.blancoguzman.es/uploads/messages/20-example.pdf");
+    expect(payload.text).toContain("https://research.blancoguzman.es/uploads/messages/20-example.pdf");
   });
 
   it("sends group notifications individually and preserves the supplied subject and link", async () => {

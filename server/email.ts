@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
 import { getAppSettings } from "./db";
 
-const PLATFORM_URL = (process.env.APP_PUBLIC_URL || "https://research.blancoguzman.es").replace(/\/+$/, "");
+const PLATFORM_URL = "https://research.blancoguzman.es";
 
 export interface EmailPayload {
   to: string | string[];
@@ -11,7 +12,21 @@ export interface EmailPayload {
 }
 
 export function getPlatformUrl(path = "/dashboard"): string {
+  if (/^https?:\/\//i.test(path)) return path;
   return `${PLATFORM_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function getPublicAssetUrl(urlOrPath: string): string {
+  return getPlatformUrl(urlOrPath);
+}
+
+function extractMailboxAddress(value: string): string {
+  const match = value.match(/<([^>]+)>/);
+  return (match?.[1] ?? value).trim();
+}
+
+function formatFromAddress(value: string): string {
+  return value.includes("<") ? value : `AI&Tech4Human Research & Innovation Group <${value}>`;
 }
 
 export function escapeHtml(value: string): string {
@@ -60,7 +75,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     const port = parseInt(settings["smtp_port"] ?? "587", 10);
     const user = settings["smtp_user"];
     const password = settings["smtp_password"];
-    const from = settings["smtp_from"] || user;
+    const fromAddress = settings["smtp_from"] || user;
     if (!host || !user || !password) {
       console.warn("[email] SMTP not configured — skipping email send.");
       return false;
@@ -72,12 +87,20 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
       auth: { user, pass: password },
       tls: { rejectUnauthorized: false },
     });
+    const mailboxAddress = extractMailboxAddress(fromAddress);
+    const fromDomain = mailboxAddress.split("@")[1] || "blancoguzman.es";
     await transporter.sendMail({
-      from,
+      from: formatFromAddress(fromAddress),
+      replyTo: settings["smtp_reply_to"] || mailboxAddress,
       to: Array.isArray(payload.to) ? payload.to.join(", ") : payload.to,
       subject: payload.subject,
       html: payload.html,
       text: payload.text,
+      messageId: `<${randomUUID()}@${fromDomain}>`,
+      headers: {
+        "X-Auto-Response-Suppress": "All",
+        "X-Entity-Ref-ID": randomUUID(),
+      },
     });
     console.log(`[email] Sent "${payload.subject}" to ${Array.isArray(payload.to) ? payload.to.length : 1} recipient(s)`);
     return true;
@@ -97,10 +120,10 @@ export async function sendMessageEmail(opts: {
 }): Promise<boolean> {
   const link = getPlatformUrl(`/dashboard/messages?message=${opts.messageId}`);
   const attachmentsHtml = opts.attachments?.length
-    ? `<div style="margin-top: 18px;"><p style="color: #4b5563; font-weight: 700; margin: 0 0 8px;">Attachments</p><ul style="margin: 0; padding-left: 20px; line-height: 1.7;">${opts.attachments.map((attachment) => `<li><a href="${escapeHtml(attachment.fileUrl)}" style="color: #5b4aa1;">${escapeHtml(attachment.fileName)}</a></li>`).join("")}</ul></div>`
+    ? `<div style="margin-top: 18px;"><p style="color: #4b5563; font-weight: 700; margin: 0 0 8px;">Attachments</p><ul style="margin: 0; padding-left: 20px; line-height: 1.7;">${opts.attachments.map((attachment) => `<li><a href="${escapeHtml(getPublicAssetUrl(attachment.fileUrl))}" style="color: #5b4aa1;">${escapeHtml(attachment.fileName)}</a></li>`).join("")}</ul></div>`
     : "";
   const attachmentsText = opts.attachments?.length
-    ? `\n\nAttachments:\n${opts.attachments.map((attachment) => `- ${attachment.fileName}: ${attachment.fileUrl}`).join("\n")}`
+    ? `\n\nAttachments:\n${opts.attachments.map((attachment) => `- ${attachment.fileName}: ${getPublicAssetUrl(attachment.fileUrl)}`).join("\n")}`
     : "";
   const content = `
     <p style="color: #4b5563; line-height: 1.6; margin: 0 0 12px;"><strong>From:</strong> ${escapeHtml(opts.senderName)}</p>

@@ -179,4 +179,8 @@
 - [x] Hacer que el editor de mensajes ocupe casi todo el alto disponible por defecto
 - [x] Convertir el diálogo de mensajes en layout de altura completa con el editor ocupando la mayor parte del espacio
 - [x] Verificar visualmente el editor de gran altura en escritorio y móvil mediante prueba de interfaz
-- [ ] Verificar visualmente el compositor y la respuesta de gran altura en una sesión autenticada de escritorio y móvil
+- [x] Verificar visualmente el compositor y la respuesta de gran altura en una sesión autenticada de escritorio y móvil — confirmado por el usuario
+- [x] Corregir los enlaces de correos para usar siempre research.blancoguzman.es y conservar la ruta tras login
+- [x] Añadir encabezados SMTP de remitente, respuesta y mensaje para mejorar la entregabilidad
+- [x] Documentar los registros SPF, DKIM y DMARC requeridos para evitar spam
+- [x] Añadir pruebas de enlaces absolutos y encabezados de entrega de correo
