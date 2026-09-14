@@ -175,3 +175,4 @@
 - [x] Añadir pruebas de borrado de mensajes, entrega de avisos y navegación desde notificaciones
 - [x] Añadir prueba de interfaz para abrir un mensaje desde una notificación web
 - [x] Añadir prueba de integración que confirme que el borrado oculta el mensaje solo al usuario que lo eliminó
+- [x] Aumentar el espacio de escritura por defecto en composición y respuesta de mensajes

@@ -318,7 +318,7 @@ export default function Messages() {
 
         {/* Compose dialog */}
         <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90dvh] overflow-y-auto">
             <DialogHeader><DialogTitle className="font-serif">New Message</DialogTitle></DialogHeader>
             <form
               onSubmit={(e) => {
@@ -369,7 +369,13 @@ export default function Messages() {
               </div>
               <div className="space-y-1.5">
                 <Label>Message</Label>
-                <Textarea value={composeForm.body} onChange={(e) => setComposeForm({ ...composeForm, body: e.target.value })} rows={5} required />
+                <Textarea
+                  value={composeForm.body}
+                  onChange={(e) => setComposeForm({ ...composeForm, body: e.target.value })}
+                  rows={9}
+                  className="min-h-52 sm:min-h-60 resize-y"
+                  required
+                />
               </div>
               {pendingAttachments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -396,7 +402,7 @@ export default function Messages() {
 
         {/* Reply dialog */}
         <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90dvh] overflow-y-auto">
             <DialogHeader><DialogTitle className="font-serif">Reply</DialogTitle></DialogHeader>
             {!selectedMsg ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Loading message details…</p>
@@ -431,7 +437,14 @@ export default function Messages() {
                   </label>
                 </div>
               )}
-              <Textarea value={replyBody} onChange={(e) => setReplyBody(e.target.value)} rows={5} placeholder="Write your reply..." required />
+              <Textarea
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                rows={9}
+                className="min-h-52 sm:min-h-60 resize-y"
+                placeholder="Write your reply..."
+                required
+              />
               <Button type="submit" className="w-full gap-1.5" disabled={replyMutation.isPending || activeReplyRecipientIds.length === 0}>
                 <Send className="w-3.5 h-3.5" />{replyMutation.isPending ? "Sending..." : "Send Reply"}
               </Button>
