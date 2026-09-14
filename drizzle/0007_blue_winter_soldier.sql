@@ -11,4 +11,6 @@ CREATE TABLE `messageRecipients` (
 ALTER TABLE `messageRecipients` ADD CONSTRAINT `messageRecipients_messageId_messages_id_fk` FOREIGN KEY (`messageId`) REFERENCES `messages`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `messageRecipients` ADD CONSTRAINT `messageRecipients_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 INSERT IGNORE INTO `messageRecipients` (`messageId`, `userId`, `isRead`, `createdAt`)
-SELECT `id`, `recipientId`, `isReadByRecipient`, `createdAt` FROM `messages`;
+SELECT `messages`.`id`, `messages`.`recipientId`, `messages`.`isReadByRecipient`, `messages`.`createdAt`
+FROM `messages`
+INNER JOIN `users` ON `users`.`id` = `messages`.`recipientId`;

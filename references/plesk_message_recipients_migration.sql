@@ -14,5 +14,6 @@ CREATE TABLE IF NOT EXISTS `messageRecipients` (
 );
 
 INSERT IGNORE INTO `messageRecipients` (`messageId`, `userId`, `isRead`, `createdAt`)
-SELECT `id`, `recipientId`, `isReadByRecipient`, `createdAt`
-FROM `messages`;
+SELECT `messages`.`id`, `messages`.`recipientId`, `messages`.`isReadByRecipient`, `messages`.`createdAt`
+FROM `messages`
+INNER JOIN `users` ON `users`.`id` = `messages`.`recipientId`;

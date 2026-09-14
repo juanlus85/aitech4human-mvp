@@ -167,3 +167,5 @@
 - [x] Crear los registros, avisos internos y correos para cada destinatario de un mensaje multidestinatario
 - [x] Adaptar la composición y lectura de mensajes multidestinatario para escritorio y móvil
 - [x] Añadir pruebas de mensajería multidestinatario y verificar visualmente los puntos de corte responsive
+- [x] Corregir el script de migración Plesk para omitir mensajes históricos con destinatarios eliminados
+- [x] Añadir una acción de respuesta directa y visible en cada mensaje recibido del inbox

@@ -163,6 +163,24 @@ export default function Messages() {
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{msg.subject}</p>
                         {isUnread && <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1" />}
                       </div>
+                      {msg.senderId !== user?.id && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-primary hover:text-primary hover:bg-primary/10"
+                          aria-label={`Reply to ${msg.senderName ?? "sender"}`}
+                          title="Reply"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedId(msg.id);
+                            setReplyMode("sender");
+                            setReplyOpen(true);
+                          }}
+                        >
+                          <Reply className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
@@ -334,7 +352,11 @@ export default function Messages() {
         <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle className="font-serif">Reply</DialogTitle></DialogHeader>
-            <form
+            {!selectedMsg ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Loading message details…</p>
+            ) : (
+              <>
+              <form
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!selectedMsg || activeReplyRecipientIds.length === 0) return;
@@ -368,7 +390,6 @@ export default function Messages() {
                 <Send className="w-3.5 h-3.5" />{replyMutation.isPending ? "Sending..." : "Send Reply"}
               </Button>
             </form>
-            {selectedMsg && (
               <div className="border-t border-border/40 pt-3 mt-1 space-y-1.5">
                 <p className="text-xs text-muted-foreground font-medium">
                   ——— Original message from {selectedMsg.senderName ?? "Unknown"} · {format(new Date(selectedMsg.createdAt), "MMM d, yyyy 'at' HH:mm")} ———
@@ -376,6 +397,7 @@ export default function Messages() {
                 <p className="text-xs font-semibold text-muted-foreground">{selectedMsg.subject}</p>
                 <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed border-l-2 border-border/50 pl-3 max-h-32 overflow-y-auto">{selectedMsg.body}</p>
               </div>
+              </>
             )}
           </DialogContent>
         </Dialog>
