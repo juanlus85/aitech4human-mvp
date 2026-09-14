@@ -9,6 +9,7 @@ import {
   timestamp,
   varchar,
   bigint,
+  uniqueIndex,
 } from "drizzle-orm/mysql-core";
 
 // ─── Users & Auth ────────────────────────────────────────────────────────────
@@ -96,6 +97,18 @@ export const messages = mysqlTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+export const messageRecipients = mysqlTable("messageRecipients", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: int("messageId").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  messageUserUnique: uniqueIndex("messageRecipients_message_user_unique").on(table.messageId, table.userId),
+}));
+
+export type MessageRecipient = typeof messageRecipients.$inferSelect;
 
 export const messageAttachments = mysqlTable("messageAttachments", {
   id: int("id").autoincrement().primaryKey(),

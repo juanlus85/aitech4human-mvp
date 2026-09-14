@@ -161,3 +161,9 @@
 - [x] Añadir pruebas de integración para mensajes, notificaciones internas y retorno al destino tras el login
 - [x] Añadir pruebas de router para mensajes con adjuntos, reuniones y retorno de login desde enlaces de correo
 - [x] Añadir prueba de interfaz del login para comprobar el retorno efectivo al mensaje enlazado desde el correo
+- [x] Permitir enviar un mensaje a uno o varios miembros, incluido el propio remitente
+- [x] Añadir selección y deselección de todos los miembros en la composición de mensajes
+- [x] Permitir responder solo al remitente o a todos los participantes originales
+- [x] Crear los registros, avisos internos y correos para cada destinatario de un mensaje multidestinatario
+- [x] Adaptar la composición y lectura de mensajes multidestinatario para escritorio y móvil
+- [x] Añadir pruebas de mensajería multidestinatario y verificar visualmente los puntos de corte responsive

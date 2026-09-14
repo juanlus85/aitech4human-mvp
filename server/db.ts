@@ -1,8 +1,8 @@
-import { aliasedTable, and, desc, eq, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
-  users, profiles, news, messages, messageAttachments,
+  users, profiles, news, messages, messageRecipients, messageAttachments,
   meetings, meetingAttendance, meetingDateOptions, meetingDateVotes,
   congresses, commProposals, commProposalInterests, commProposalAttendance,
   papers, paperContributors,
@@ -55,6 +55,16 @@ export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+export async function getActiveMessageRecipients() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.isActive, true))
+    .orderBy(asc(users.name));
 }
 
 export async function getUserById(id: number) {
@@ -192,7 +202,8 @@ export async function getMessagesForUser(userId: number) {
   return db
     .select()
     .from(messages)
-    .where(sql`${messages.recipientId} = ${userId} OR ${messages.senderId} = ${userId}`)
+    .leftJoin(messageRecipients, eq(messageRecipients.messageId, messages.id))
+    .where(sql`${messageRecipients.userId} = ${userId} OR ${messages.senderId} = ${userId}`)
     .orderBy(desc(messages.createdAt));
 }
 
@@ -206,19 +217,20 @@ export async function getInboxForUser(userId: number) {
     .select({
       id: messages.id,
       senderId: messages.senderId,
-      recipientId: messages.recipientId,
+      recipientId: messageRecipients.userId,
       parentId: messages.parentId,
       subject: messages.subject,
       body: messages.body,
-      isReadByRecipient: messages.isReadByRecipient,
+      isReadByRecipient: messageRecipients.isRead,
       createdAt: messages.createdAt,
       senderName: senderAlias.name,
       recipientName: recipientAlias.name,
     })
     .from(messages)
+    .innerJoin(messageRecipients, eq(messageRecipients.messageId, messages.id))
     .leftJoin(senderAlias, eq(senderAlias.id, messages.senderId))
-    .leftJoin(recipientAlias, eq(recipientAlias.id, messages.recipientId))
-    .where(eq(messages.recipientId, userId))
+    .leftJoin(recipientAlias, eq(recipientAlias.id, messageRecipients.userId))
+    .where(eq(messageRecipients.userId, userId))
     .orderBy(desc(messages.createdAt));
   return rows;
 }
@@ -230,21 +242,25 @@ export async function getSentByUser(userId: number) {
     .select({
       id: messages.id,
       senderId: messages.senderId,
-      recipientId: messages.recipientId,
       parentId: messages.parentId,
       subject: messages.subject,
       body: messages.body,
-      isReadByRecipient: messages.isReadByRecipient,
       createdAt: messages.createdAt,
       senderName: senderAlias.name,
-      recipientName: recipientAlias.name,
     })
     .from(messages)
     .leftJoin(senderAlias, eq(senderAlias.id, messages.senderId))
-    .leftJoin(recipientAlias, eq(recipientAlias.id, messages.recipientId))
     .where(eq(messages.senderId, userId))
     .orderBy(desc(messages.createdAt));
-  return rows;
+  return Promise.all(rows.map(async (message) => {
+    const recipients = await getMessageRecipients(message.id);
+    return {
+      ...message,
+      recipients,
+      recipientId: recipients[0]?.userId ?? null,
+      recipientName: recipients.map((recipient) => recipient.name).join(", "),
+    };
+  }));
 }
 
 export async function getMessageById(id: number) {
@@ -262,10 +278,33 @@ export async function createMessage(data: typeof messages.$inferInsert) {
   return r[0] ?? null;
 }
 
-export async function markMessageRead(id: number) {
+export async function createMessageRecipients(messageId: number, userIds: number[]) {
+  const db = await getDb();
+  if (!db || userIds.length === 0) return;
+  await db.insert(messageRecipients).values(userIds.map((userId) => ({ messageId, userId })));
+}
+
+export async function getMessageRecipients(messageId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      userId: messageRecipients.userId,
+      isRead: messageRecipients.isRead,
+      name: users.name,
+      email: users.email,
+    })
+    .from(messageRecipients)
+    .innerJoin(users, eq(users.id, messageRecipients.userId))
+    .where(eq(messageRecipients.messageId, messageId));
+}
+
+export async function markMessageRead(messageId: number, userId: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(messages).set({ isReadByRecipient: true }).where(eq(messages.id, id));
+  await db.update(messageRecipients)
+    .set({ isRead: true })
+    .where(and(eq(messageRecipients.messageId, messageId), eq(messageRecipients.userId, userId)));
 }
 
 export async function getAttachmentsForMessage(messageId: number) {

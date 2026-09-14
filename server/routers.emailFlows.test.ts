@@ -3,7 +3,9 @@ import type { TrpcContext } from "./_core/context";
 
 const mocks = vi.hoisted(() => ({
   createMessage: vi.fn(),
+  createMessageRecipients: vi.fn(),
   createMessageAttachment: vi.fn(),
+  getUserById: vi.fn(),
   createMeeting: vi.fn(),
   createDateOption: vi.fn(),
   getAllUsers: vi.fn(),
@@ -16,7 +18,9 @@ vi.mock("./db", async (importOriginal) => {
   return {
     ...actual,
     createMessage: mocks.createMessage,
+    createMessageRecipients: mocks.createMessageRecipients,
     createMessageAttachment: mocks.createMessageAttachment,
+    getUserById: mocks.getUserById,
     createMeeting: mocks.createMeeting,
     createDateOption: mocks.createDateOption,
     getAllUsers: mocks.getAllUsers,
@@ -55,7 +59,9 @@ function createContext(userId = 1): TrpcContext {
 describe("email-triggering router flows", () => {
   beforeEach(() => {
     mocks.createMessage.mockReset().mockResolvedValue({ id: 42 });
+    mocks.createMessageRecipients.mockReset().mockResolvedValue(undefined);
     mocks.createMessageAttachment.mockReset().mockResolvedValue(undefined);
+    mocks.getUserById.mockReset().mockImplementation(async (id: number) => ({ id, email: `member${id}@example.org`, isActive: true }));
     mocks.createMeeting.mockReset().mockResolvedValue({ id: 16 });
     mocks.createDateOption.mockReset().mockResolvedValue(undefined);
     mocks.getAllUsers.mockReset().mockResolvedValue([
@@ -66,11 +72,11 @@ describe("email-triggering router flows", () => {
     mocks.createAndEmailNotification.mockReset().mockResolvedValue(undefined);
   });
 
-  it("uploads message attachments before triggering its internal and email notification", async () => {
+  it("allows the sender to include themselves and notifies every selected recipient", async () => {
     const caller = appRouter.createCaller(createContext());
 
     await caller.messages.send({
-      recipientId: 8,
+      recipientIds: [1, 8, 9],
       subject: "Research proposal",
       body: "Please review the attached proposal.",
       attachments: [{
@@ -82,17 +88,25 @@ describe("email-triggering router flows", () => {
     });
 
     expect(mocks.createMessage).toHaveBeenCalledWith({
-      recipientId: 8,
+      recipientId: 1,
       subject: "Research proposal",
       body: "Please review the attached proposal.",
       senderId: 1,
     });
+    expect(mocks.createMessageRecipients).toHaveBeenCalledWith(42, [1, 8, 9]);
     expect(mocks.storagePut).toHaveBeenCalledOnce();
     expect(mocks.createMessageAttachment).toHaveBeenCalledWith(expect.objectContaining({
       messageId: 42,
       fileName: "proposal.pdf",
       fileUrl: "/uploads/messages/proposal.pdf",
     }));
+    expect(mocks.createAndEmailNotification).toHaveBeenCalledTimes(3);
+    expect(mocks.createAndEmailNotification).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 1,
+      type: "message",
+      relatedModule: "messages",
+      relatedId: 42,
+    }), expect.objectContaining({ kind: "message", messageId: 42 }));
     expect(mocks.createAndEmailNotification).toHaveBeenCalledWith(expect.objectContaining({
       userId: 8,
       type: "message",
@@ -103,6 +117,12 @@ describe("email-triggering router flows", () => {
       messageId: 42,
       attachments: [{ fileName: "proposal.pdf", fileUrl: "/uploads/messages/proposal.pdf" }],
     }));
+    expect(mocks.createAndEmailNotification).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 9,
+      type: "message",
+      relatedModule: "messages",
+      relatedId: 42,
+    }), expect.objectContaining({ kind: "message", messageId: 42 }));
   });
 
   it("creates a complete meeting notification and email for every other member", async () => {

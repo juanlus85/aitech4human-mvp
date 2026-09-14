@@ -50,6 +50,13 @@
       "when": 1780266663100,
       "tag": "0006_loud_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1789374069878,
+      "tag": "0007_blue_winter_soldier",
+      "breakpoints": true
     }
   ]
 }

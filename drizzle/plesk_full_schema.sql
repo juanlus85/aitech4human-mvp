@@ -82,6 +82,19 @@ CREATE TABLE IF NOT EXISTS `messages` (
   CONSTRAINT `messages_recipientId_users_id_fk` FOREIGN KEY (`recipientId`) REFERENCES `users`(`id`)
 );
 
+-- Message Recipients (supports one or more recipients per message)
+CREATE TABLE IF NOT EXISTS `messageRecipients` (
+  `id` int AUTO_INCREMENT NOT NULL,
+  `messageId` int NOT NULL,
+  `userId` int NOT NULL,
+  `isRead` boolean NOT NULL DEFAULT false,
+  `createdAt` timestamp NOT NULL DEFAULT (now()),
+  CONSTRAINT `messageRecipients_id` PRIMARY KEY(`id`),
+  CONSTRAINT `messageRecipients_message_user_unique` UNIQUE(`messageId`, `userId`),
+  CONSTRAINT `messageRecipients_messageId_messages_id_fk` FOREIGN KEY (`messageId`) REFERENCES `messages`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `messageRecipients_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE
+);
+
 -- Message Attachments
 CREATE TABLE IF NOT EXISTS `messageAttachments` (
   `id` int AUTO_INCREMENT NOT NULL,

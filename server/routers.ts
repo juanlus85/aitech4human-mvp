@@ -4,10 +4,10 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { systemRouter } from "./_core/systemRouter";
 import { loginUser, registerUser, getUserFromToken, hashPassword, verifyPassword } from "./auth";
 import {
-  getAllUsers, getUserById, updateUser, deleteUser, updateUserPassword,
+  getAllUsers, getActiveMessageRecipients, getUserById, updateUser, deleteUser, updateUserPassword,
   getProfileByUserId, upsertProfile, getAllPublicProfilesMapped,
   getPublishedNews, getAllNews, getNewsBySlug, getNewsById, createNews, updateNews, deleteNews,
-  getInboxForUser, getSentByUser, getMessageById, createMessage, markMessageRead,
+  getInboxForUser, getSentByUser, getMessageById, createMessage, createMessageRecipients, getMessageRecipients, markMessageRead,
   getAttachmentsForMessage, createMessageAttachment,
   getAllMeetings, getMeetingById, createMeeting, updateMeeting, deleteMeeting,
   getMeetingAttendance, upsertAttendance, getMeetingDateOptions, createDateOption,
@@ -336,29 +336,36 @@ const newsRouter = router({
 const messagesRouter = router({
   inbox: protectedProcedure.query(({ ctx }) => getInboxForUser(ctx.user.id)),
   sent: protectedProcedure.query(({ ctx }) => getSentByUser(ctx.user.id)),
+  recipients: protectedProcedure.query(() => getActiveMessageRecipients()),
 
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input, ctx }) => {
       const msg = await getMessageById(input.id);
       if (!msg) throw new TRPCError({ code: "NOT_FOUND" });
-      if (msg.senderId !== ctx.user.id && msg.recipientId !== ctx.user.id) {
+      const recipients = await getMessageRecipients(input.id);
+      const isRecipient = recipients.some((recipient) => recipient.userId === ctx.user.id);
+      if (msg.senderId !== ctx.user.id && !isRecipient) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      if (msg.recipientId === ctx.user.id && !msg.isReadByRecipient) {
-        await markMessageRead(input.id);
+      if (isRecipient && !recipients.find((recipient) => recipient.userId === ctx.user.id)?.isRead) {
+        await markMessageRead(input.id, ctx.user.id);
       }
       const attachments = await getAttachmentsForMessage(input.id);
-      const [sender, recipient] = await Promise.all([
-        getUserById(msg.senderId),
-        getUserById(msg.recipientId),
-      ]);
-      return { ...msg, attachments, senderName: sender?.name ?? null, recipientName: recipient?.name ?? null };
+      const sender = await getUserById(msg.senderId);
+      return {
+        ...msg,
+        attachments,
+        recipients,
+        senderName: sender?.name ?? null,
+        recipientName: recipients[0]?.name ?? null,
+      };
     }),
 
   send: protectedProcedure
     .input(z.object({
-      recipientId: z.number(),
+      recipientId: z.number().optional(),
+      recipientIds: z.array(z.number()).min(1).optional(),
       subject: z.string().min(1),
       body: z.string().min(1),
       parentId: z.number().optional(),
@@ -368,11 +375,23 @@ const messagesRouter = router({
         mimeType: z.string(),
         fileSize: z.number().optional(),
       })).optional(),
+    }).refine((input) => input.recipientId !== undefined || (input.recipientIds?.length ?? 0) > 0, {
+      message: "Select at least one recipient.",
+      path: ["recipientIds"],
     }))
     .mutation(async ({ input, ctx }) => {
-      const { attachments = [], ...messageData } = input;
-      const msg = await createMessage({ ...messageData, senderId: ctx.user.id });
+      const recipientIds = Array.from(new Set([
+        ...(input.recipientIds ?? []),
+        ...(input.recipientId !== undefined ? [input.recipientId] : []),
+      ]));
+      const recipientUsers = await Promise.all(recipientIds.map((userId) => getUserById(userId)));
+      if (recipientUsers.some((user) => !user?.isActive)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "One or more selected recipients are unavailable." });
+      }
+      const { attachments = [], recipientId: _legacyRecipientId, recipientIds: _recipientIds, ...messageData } = input;
+      const msg = await createMessage({ ...messageData, recipientId: recipientIds[0], senderId: ctx.user.id });
       if (msg) {
+        await createMessageRecipients(msg.id, recipientIds);
         const uploadedAttachments: Array<{ fileName: string; fileUrl: string }> = [];
         for (const attachment of attachments) {
           const buffer = Buffer.from(attachment.base64, "base64");
@@ -388,21 +407,23 @@ const messagesRouter = router({
           });
           uploadedAttachments.push({ fileName: attachment.fileName, fileUrl: url });
         }
-        await createAndEmailNotification({
-          userId: input.recipientId,
-          type: "message",
-          title: "New message",
-          body: `You have a new message: "${input.subject}"`,
-          relatedModule: "messages",
-          relatedId: msg.id,
-        }, {
-          kind: "message",
-          senderName: ctx.user.name,
-          subject: input.subject,
-          messageBody: input.body,
-          messageId: msg.id,
-          attachments: uploadedAttachments,
-        });
+        for (const recipientId of recipientIds) {
+          await createAndEmailNotification({
+            userId: recipientId,
+            type: "message",
+            title: "New message",
+            body: `You have a new message: "${input.subject}"`,
+            relatedModule: "messages",
+            relatedId: msg.id,
+          }, {
+            kind: "message",
+            senderName: ctx.user.name,
+            subject: input.subject,
+            messageBody: input.body,
+            messageId: msg.id,
+            attachments: uploadedAttachments,
+          });
+        }
       }
       return msg;
     }),
