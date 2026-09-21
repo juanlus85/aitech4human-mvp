@@ -5,7 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { loginUser, registerUser, getUserFromToken, hashPassword, verifyPassword } from "./auth";
 import {
   getAllUsers, getActiveMessageRecipients, getUserById, updateUser, deleteUser, updateUserPassword,
-  getProfileByUserId, upsertProfile, getAllPublicProfilesMapped,
+  getProfileByUserId, upsertProfile, getAllPublicProfilesMapped, getAllInternalMemberProfiles,
   getPublishedNews, getAllNews, getNewsBySlug, getNewsById, createNews, updateNews, deleteNews,
   getInboxForUser, getSentByUser, getMessageById, createMessage, createMessageRecipients, getMessageRecipients, markMessageRead, isMessageDeletedForUser, deleteMessageForUser,
   getAttachmentsForMessage, createMessageAttachment,
@@ -226,6 +226,8 @@ const usersRouter = router({
 
 const profilesRouter = router({
   publicList: publicProcedure.query(() => getAllPublicProfilesMapped()),
+
+  internalList: protectedProcedure.query(() => getAllInternalMemberProfiles()),
 
   publicGetByUserId: publicProcedure
     .input(z.object({ userId: z.number() }))

@@ -146,6 +146,44 @@ export async function getAllPublicProfilesMapped() {
   }));
 }
 
+/**
+ * Full member information for the authenticated collaboration directory.
+ * Unlike the public directory, internal members can see contact and profile
+ * information irrespective of the public email visibility preference.
+ */
+export async function getAllInternalMemberProfiles() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      userId: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      photoUrl: profiles.photoUrl,
+      bio: profiles.bio,
+      interests: profiles.interests,
+      university: profiles.university,
+      department: profiles.department,
+      researchArea: profiles.researchArea,
+      orcid: profiles.orcid,
+      googleScholar: profiles.googleScholar,
+      researchGate: profiles.researchGate,
+      scopus: profiles.scopus,
+      webOfScience: profiles.webOfScience,
+      linkedin: profiles.linkedin,
+      personalWeb: profiles.personalWeb,
+      cvPdfUrl: profiles.cvPdfUrl,
+      keywords: profiles.keywords,
+      languages: profiles.languages,
+      availableToCollaborate: profiles.availableToCollaborate,
+    })
+    .from(users)
+    .leftJoin(profiles, eq(profiles.userId, users.id))
+    .where(eq(users.isActive, true))
+    .orderBy(asc(users.name));
+}
+
 // ─── News ─────────────────────────────────────────────────────────────────────
 
 export async function getPublishedNews(limit = 20) {

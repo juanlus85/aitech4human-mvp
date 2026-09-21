@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
+import { getPreselectedMessageRecipientId } from "@/lib/messageNavigation";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ export default function Messages() {
   const [replyBody, setReplyBody] = useState("");
   const [replyMode, setReplyMode] = useState<"sender" | "all">("sender");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; subject: string } | null>(null);
+  const [hasAppliedRecipientPrefill, setHasAppliedRecipientPrefill] = useState(false);
   const attachRef = useRef<HTMLInputElement>(null);
   const [pendingAttachments, setPendingAttachments] = useState<{ name: string; base64: string; mimeType: string; size: number }[]>([]);
 
@@ -44,6 +46,20 @@ export default function Messages() {
     { id: selectedId! },
     { enabled: !!selectedId }
   );
+
+  useEffect(() => {
+    if (hasAppliedRecipientPrefill || !recipients?.length) return;
+    setHasAppliedRecipientPrefill(true);
+
+    const recipientId = getPreselectedMessageRecipientId(
+      window.location.search,
+      recipients.map((recipient) => recipient.id),
+    );
+    if (!recipientId) return;
+
+    setComposeForm((current) => ({ ...current, recipientIds: [recipientId] }));
+    setComposeOpen(true);
+  }, [hasAppliedRecipientPrefill, recipients]);
 
   const sendMutation = trpc.messages.send.useMutation({
     onSuccess: () => {

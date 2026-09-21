@@ -65,6 +65,7 @@ const mainNav = [
 ];
 
 const collaborationNav = [
+  { icon: Users, label: "Members", path: "/dashboard/members" },
   { icon: MessageSquare, label: "Messages", path: "/dashboard/messages" },
   { icon: Megaphone, label: "Announcements", path: "/dashboard/announcements" },
   { icon: CalendarDays, label: "Meetings", path: "/dashboard/meetings" },

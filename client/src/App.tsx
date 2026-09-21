@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 // Private dashboard pages
 import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/dashboard/Profile";
+import InternalMembers from "./pages/dashboard/InternalMembers";
 import Messages from "./pages/dashboard/Messages";
 import Announcements from "./pages/dashboard/Announcements";
 import Settings from "./pages/dashboard/Settings";
@@ -53,6 +54,7 @@ function Router() {
       {/* Private dashboard */}
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/profile" component={Profile} />
+      <Route path="/dashboard/members" component={InternalMembers} />
       <Route path="/dashboard/messages" component={Messages} />
       <Route path="/dashboard/announcements" component={Announcements} />
       <Route path="/dashboard/meetings" component={Meetings} />

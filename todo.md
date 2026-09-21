@@ -184,3 +184,4 @@
 - [x] Añadir encabezados SMTP de remitente, respuesta y mensaje para mejorar la entregabilidad
 - [x] Documentar los registros SPF, DKIM y DMARC requeridos para evitar spam
 - [x] Añadir pruebas de enlaces absolutos y encabezados de entrega de correo
+- [x] Añadir directorio interno de miembros con ficha completa y acceso directo a mensajería
