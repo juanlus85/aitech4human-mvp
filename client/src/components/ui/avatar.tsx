@@ -3,6 +3,8 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar";
 
 import { cn } from "@/lib/utils";
 
+const avatarImageClassName = "aspect-square size-full object-cover object-center";
+
 function Avatar({
   className,
   ...props
@@ -26,7 +28,7 @@ function AvatarImage({
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn("aspect-square size-full", className)}
+      className={cn(avatarImageClassName, className)}
       {...props}
     />
   );
@@ -48,4 +50,4 @@ function AvatarFallback({
   );
 }
 
-export { Avatar, AvatarImage, AvatarFallback };
+export { Avatar, AvatarImage, AvatarFallback, avatarImageClassName };
