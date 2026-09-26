@@ -28,7 +28,7 @@ import {
   markAllNotificationsRead, getUnreadNotificationCount,
   getAllAnnouncements, getAnnouncementById, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
-  getAnnouncementAttachments,
+  getAnnouncementAttachments, getAnnouncementAttachmentById, createAnnouncementAttachment, deleteAnnouncementAttachment,
   getAllLinks, createLink, deleteLink, updateLink,
   getCommProposalAttendance, upsertCommProposalAttendance, removeCommProposalAttendance,
   getCongressAttendance, upsertCongressAttendance, removeCongressAttendance,
@@ -54,6 +54,50 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
+}
+
+const MAX_ANNOUNCEMENT_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const announcementAttachmentSchema = z.object({
+  base64: z.string().min(1),
+  fileName: z.string().trim().min(1).max(512),
+  mimeType: z.string().trim().min(1).max(128),
+  fileSize: z.number().int().positive().max(MAX_ANNOUNCEMENT_ATTACHMENT_BYTES),
+});
+
+type AnnouncementAttachmentInput = z.infer<typeof announcementAttachmentSchema>;
+
+function getSafeAttachmentFileName(fileName: string) {
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^_+|_+$/g, "");
+  return safeName || "attachment";
+}
+
+async function storeAnnouncementAttachments(announcementId: number, attachments: AnnouncementAttachmentInput[]) {
+  const stored: Array<{ id: number; fileKey: string }> = [];
+  try {
+    for (let index = 0; index < attachments.length; index += 1) {
+      const attachment = attachments[index];
+      const buffer = Buffer.from(attachment.base64, "base64");
+      if (!buffer.length || buffer.length > MAX_ANNOUNCEMENT_ATTACHMENT_BYTES) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Each attachment must be no larger than 20 MB." });
+      }
+      const key = `announcements/${announcementId}/${Date.now()}-${index}-${getSafeAttachmentFileName(attachment.fileName)}`;
+      const { key: storedKey, url } = await storagePut(key, buffer, attachment.mimeType);
+      const storedAttachment = await createAnnouncementAttachment({
+        announcementId,
+        fileName: attachment.fileName,
+        fileKey: storedKey,
+        fileUrl: url,
+        fileSize: buffer.length,
+        mimeType: attachment.mimeType,
+      });
+      if (!storedAttachment) throw new Error("Could not save the attachment record.");
+      stored.push({ id: storedAttachment.id, fileKey: storedKey });
+    }
+  } catch (error) {
+    await Promise.allSettled(stored.map(({ id }) => deleteAnnouncementAttachment(id)));
+    await Promise.allSettled(stored.map(({ fileKey }) => storageDelete(fileKey)));
+    throw error;
+  }
 }
 
 // ─── Auth Router ──────────────────────────────────────────────────────────────
@@ -1276,15 +1320,25 @@ const announcementsRouter = router({
       body: z.string().min(1),
       isPinned: z.boolean().optional(),
       notifyEmail: z.boolean().optional(),
+      attachments: z.array(announcementAttachmentSchema).max(10).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      const { attachments = [], notifyEmail, ...announcementInput } = input;
       const result = await createAnnouncement({
         authorId: ctx.user.id,
-        subject: input.subject,
-        body: input.body,
-        isPinned: (input.isPinned ?? false) ? 1 : 0,
+        subject: announcementInput.subject,
+        body: announcementInput.body,
+        isPinned: (announcementInput.isPinned ?? false) ? 1 : 0,
       });
-      if (input.notifyEmail && result) {
+      if (result) {
+        try {
+          await storeAnnouncementAttachments(result.id, attachments);
+        } catch (error) {
+          await deleteAnnouncement(result.id);
+          throw error;
+        }
+      }
+      if (notifyEmail && result) {
         const emails = await getAllUserEmails();
         await notifyMembers({
           subject: `Announcement: ${result.subject}`,
@@ -1303,15 +1357,17 @@ const announcementsRouter = router({
       subject: z.string().min(1).max(512).optional(),
       body: z.string().min(1).optional(),
       isPinned: z.boolean().optional(),
+      attachments: z.array(announcementAttachmentSchema).max(10).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const ann = await getAnnouncementById(input.id);
       if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
       if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      const { id, isPinned: isPinnedBool, ...rest } = input;
+      const { id, isPinned: isPinnedBool, attachments = [], ...rest } = input;
       const data: any = { ...rest };
       if (isPinnedBool !== undefined) data.isPinned = isPinnedBool ? 1 : 0;
       await updateAnnouncement(id, data);
+      await storeAnnouncementAttachments(id, attachments);
       return { success: true };
     }),
 
@@ -1321,7 +1377,22 @@ const announcementsRouter = router({
       const ann = await getAnnouncementById(input.id);
       if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
       if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const attachments = await getAnnouncementAttachments(input.id);
       await deleteAnnouncement(input.id);
+      await Promise.allSettled(attachments.map((attachment) => storageDelete(attachment.fileKey)));
+      return { success: true };
+    }),
+
+  deleteAttachment: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const attachment = await getAnnouncementAttachmentById(input.id);
+      if (!attachment?.announcementId) throw new TRPCError({ code: "NOT_FOUND" });
+      const ann = await getAnnouncementById(attachment.announcementId);
+      if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
+      if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await deleteAnnouncementAttachment(input.id);
+      await storageDelete(attachment.fileKey);
       return { success: true };
     }),
 

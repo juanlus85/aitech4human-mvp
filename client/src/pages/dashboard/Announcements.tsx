@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Megaphone, Plus, Reply, Trash2, Pin, ChevronDown, ChevronUp, Paperclip, Send, Pencil } from "lucide-react";
+import { Megaphone, Plus, Reply, Trash2, Pin, ChevronDown, ChevronUp, Paperclip, Send, Pencil, Download, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 function initials(name?: string | null) {
@@ -21,6 +21,106 @@ function initials(name?: string | null) {
 function formatDate(d: Date | string | null) {
   if (!d) return "";
   return formatDistanceToNow(new Date(d), { addSuffix: true });
+}
+
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const MAX_ATTACHMENTS = 10;
+
+type PendingAttachment = {
+  name: string;
+  base64: string;
+  mimeType: string;
+  fileSize: number;
+};
+
+function formatBytes(bytes?: number | null) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileToAttachment(file: File): Promise<PendingAttachment> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      const base64 = result.split(",")[1];
+      if (!base64) { reject(new Error(`Could not read ${file.name}.`)); return; }
+      resolve({ name: file.name, base64, mimeType: file.type || "application/octet-stream", fileSize: file.size });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function AnnouncementAttachmentPicker({
+  attachments,
+  onChange,
+  inputId,
+  disabled = false,
+}: {
+  attachments: PendingAttachment[];
+  onChange: (attachments: PendingAttachment[]) => void;
+  inputId: string;
+  disabled?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    const remainingSlots = MAX_ATTACHMENTS - attachments.length;
+    if (remainingSlots <= 0) {
+      toast.error(`An announcement can include up to ${MAX_ATTACHMENTS} attachments.`);
+      return;
+    }
+    if (selectedFiles.length > remainingSlots) {
+      toast.error(`Only ${remainingSlots} more attachment${remainingSlots === 1 ? "" : "s"} can be added.`);
+    }
+    const validFiles = selectedFiles.slice(0, remainingSlots).filter((file) => {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        toast.error(`“${file.name}” is larger than the 20 MB limit.`);
+        return false;
+      }
+      return true;
+    });
+    try {
+      const added = await Promise.all(validFiles.map(fileToAttachment));
+      onChange([...attachments, ...added]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not read the selected file.");
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <Label>Attachments</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">Up to 10 files, 20 MB each.</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="gap-1.5 bg-white/60" disabled={disabled || attachments.length >= MAX_ATTACHMENTS} onClick={() => inputRef.current?.click()}>
+          <Paperclip className="h-3.5 w-3.5" />Attach files
+        </Button>
+        <input id={inputId} ref={inputRef} type="file" multiple className="hidden" onChange={addFiles} disabled={disabled} />
+      </div>
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 rounded-lg border border-border/50 bg-muted/15 p-2">
+          {attachments.map((attachment, index) => (
+            <Badge key={`${attachment.name}-${index}`} variant="secondary" className="max-w-full gap-1 py-1 font-normal">
+              <Paperclip className="h-3 w-3 shrink-0" />
+              <span className="max-w-[13rem] truncate" title={attachment.name}>{attachment.name}</span>
+              <span className="text-muted-foreground">{formatBytes(attachment.fileSize)}</span>
+              <button type="button" aria-label={`Remove ${attachment.name}`} disabled={disabled} onClick={() => onChange(attachments.filter((_, attachmentIndex) => attachmentIndex !== index))} className="ml-0.5 rounded-sm hover:text-destructive disabled:opacity-50">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Announcements() {
@@ -41,6 +141,7 @@ function AnnouncementsContent() {
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set());
   const [expandedBodies, setExpandedBodies] = useState<Set<number>>(new Set());
   const [editAnn, setEditAnn] = useState<{ id: number; subject: string; body: string; isPinned: boolean } | null>(null);
+  const [editAttachments, setEditAttachments] = useState<PendingAttachment[]>([]);
   const toggleBody = (id: number) => setExpandedBodies((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const { data: detail } = trpc.announcements.getById.useQuery(
@@ -61,9 +162,19 @@ function AnnouncementsContent() {
     onSuccess: () => {
       utils.announcements.list.invalidate();
       setEditAnn(null);
+      setEditAttachments([]);
       toast.success("Announcement updated");
     },
     onError: (e) => toast.error(e.message),
+  });
+
+  const deleteAttachmentMutation = trpc.announcements.deleteAttachment.useMutation({
+    onSuccess: () => {
+      utils.announcements.list.invalidate();
+      if (selectedId) utils.announcements.getById.invalidate({ id: selectedId });
+      toast.success("Attachment deleted");
+    },
+    onError: (error) => toast.error(error.message),
   });
 
   const toggleReplies = (id: number) => {
@@ -146,12 +257,44 @@ function AnnouncementsContent() {
                           </button>
                         )}
                       </div>
+                      {ann.attachments && ann.attachments.length > 0 && (
+                        <div className="mt-3 space-y-1.5">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Attachments</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {ann.attachments.map((attachment) => (
+                              <div key={attachment.id} className="flex max-w-full items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1 text-xs">
+                                <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <a href={attachment.fileUrl} target="_blank" rel="noopener noreferrer" className="max-w-[13rem] truncate text-primary hover:underline" title={attachment.fileName}>
+                                  {attachment.fileName}
+                                </a>
+                                <span className="text-muted-foreground">{formatBytes(attachment.fileSize)}</span>
+                                <a href={attachment.fileUrl} target="_blank" rel="noopener noreferrer" aria-label={`Download ${attachment.fileName}`} className="ml-0.5 text-muted-foreground hover:text-foreground">
+                                  <Download className="h-3 w-3" />
+                                </a>
+                                {(isOwner || isAdmin) && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Delete ${attachment.fileName}`}
+                                    onClick={() => { if (confirm(`Delete attachment “${attachment.fileName}”?`)) deleteAttachmentMutation.mutate({ id: attachment.id }); }}
+                                    className="ml-0.5 text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {(isOwner || isAdmin) && (
                         <>
                           <button
-                            onClick={() => setEditAnn({ id: ann.id, subject: ann.subject, body: ann.body, isPinned: !!ann.isPinned })}
+                            onClick={() => {
+                              setEditAnn({ id: ann.id, subject: ann.subject, body: ann.body, isPinned: !!ann.isPinned });
+                              setEditAttachments([]);
+                            }}
                             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                           >
                             <Pencil className="w-4 h-4" />
@@ -218,14 +361,21 @@ function AnnouncementsContent() {
                 <Label>Message *</Label>
                 <Textarea value={editAnn.body} onChange={(e) => setEditAnn({ ...editAnn, body: e.target.value })} rows={6} />
               </div>
+              <AnnouncementAttachmentPicker attachments={editAttachments} onChange={setEditAttachments} inputId="edit-announcement-attachments" disabled={updateMutation.isPending} />
               <div className="flex items-center gap-2">
                 <Checkbox id="editIsPinned" checked={editAnn.isPinned} onCheckedChange={(v) => setEditAnn({ ...editAnn, isPinned: !!v })} />
                 <Label htmlFor="editIsPinned" className="cursor-pointer text-sm font-normal">Pin this announcement</Label>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setEditAnn(null)}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setEditAnn(null); setEditAttachments([]); }}>Cancel</Button>
                 <Button disabled={!editAnn.subject.trim() || !editAnn.body.trim() || updateMutation.isPending}
-                  onClick={() => updateMutation.mutate({ id: editAnn.id, subject: editAnn.subject, body: editAnn.body, isPinned: editAnn.isPinned })}>
+                  onClick={() => updateMutation.mutate({
+                    id: editAnn.id,
+                    subject: editAnn.subject,
+                    body: editAnn.body,
+                    isPinned: editAnn.isPinned,
+                    attachments: editAttachments.map(({ name, ...attachment }) => ({ ...attachment, fileName: name })),
+                  })}>
                   {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </DialogFooter>
@@ -337,14 +487,25 @@ function CreateAnnouncementDialog({
   const [body, setBody] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState(false);
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+
+  const resetForm = () => {
+    setSubject("");
+    setBody("");
+    setIsPinned(false);
+    setNotifyEmail(false);
+    setAttachments([]);
+  };
+
+  const closeDialog = () => {
+    resetForm();
+    onClose();
+  };
 
   const createMutation = trpc.announcements.create.useMutation({
     onSuccess: () => {
       toast.success("Announcement published");
-      setSubject("");
-      setBody("");
-      setIsPinned(false);
-      setNotifyEmail(false);
+      resetForm();
       onCreated();
     },
     onError: (e) => toast.error(e.message),
@@ -353,12 +514,18 @@ function CreateAnnouncementDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !body.trim()) return;
-    createMutation.mutate({ subject: subject.trim(), body: body.trim(), isPinned, notifyEmail });
+    createMutation.mutate({
+      subject: subject.trim(),
+      body: body.trim(),
+      isPinned,
+      notifyEmail,
+      attachments: attachments.map(({ name, ...attachment }) => ({ ...attachment, fileName: name })),
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
+    <Dialog open={open} onOpenChange={(v) => !v && closeDialog()}>
+      <DialogContent className="max-h-[92dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif">New Announcement</DialogTitle>
         </DialogHeader>
@@ -384,6 +551,7 @@ function CreateAnnouncementDialog({
               required
             />
           </div>
+          <AnnouncementAttachmentPicker attachments={attachments} onChange={setAttachments} inputId="new-announcement-attachments" disabled={createMutation.isPending} />
           <div className="flex items-center gap-2">
             <Checkbox
               id="isPinned"
@@ -405,7 +573,7 @@ function CreateAnnouncementDialog({
             </Label>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
             <Button type="submit" disabled={createMutation.isPending || !subject.trim() || !body.trim()}>
               {createMutation.isPending ? "Publishing..." : "Publish"}
             </Button>

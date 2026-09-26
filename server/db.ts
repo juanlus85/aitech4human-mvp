@@ -975,7 +975,10 @@ export async function getAllAnnouncements() {
     .from(announcements)
     .leftJoin(users, eq(announcements.authorId, users.id))
     .orderBy(desc(announcements.isPinned), desc(announcements.createdAt));
-  return rows;
+  return Promise.all(rows.map(async (announcement) => ({
+    ...announcement,
+    attachments: await getAnnouncementAttachments(announcement.id),
+  })));
 }
 
 export async function getAnnouncementById(id: number) {
@@ -1016,6 +1019,7 @@ export async function updateAnnouncement(id: number, data: Partial<typeof announ
 export async function deleteAnnouncement(id: number) {
   const db = await getDb();
   if (!db) return;
+  await db.delete(announcementAttachments).where(eq(announcementAttachments.announcementId, id));
   await db.delete(announcements).where(eq(announcements.id, id));
 }
 
@@ -1056,7 +1060,35 @@ export async function deleteAnnouncementReply(id: number) {
 export async function getAnnouncementAttachments(announcementId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(announcementAttachments).where(eq(announcementAttachments.announcementId, announcementId));
+  return db.select().from(announcementAttachments)
+    .where(eq(announcementAttachments.announcementId, announcementId))
+    .orderBy(announcementAttachments.createdAt);
+}
+
+export async function getAnnouncementAttachmentById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(announcementAttachments).where(eq(announcementAttachments.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createAnnouncementAttachment(data: typeof announcementAttachments.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(announcementAttachments).values(sanitize(data));
+  const rows = await db.select().from(announcementAttachments)
+    .where(and(
+      eq(announcementAttachments.announcementId, data.announcementId ?? -1),
+      eq(announcementAttachments.fileKey, data.fileKey),
+    ))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function deleteAnnouncementAttachment(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcementAttachments).where(eq(announcementAttachments.id, id));
 }
 
 // ─── App Settings ─────────────────────────────────────────────────────────────

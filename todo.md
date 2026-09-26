@@ -189,3 +189,4 @@
 - [x] Crear repositorio académico colaborativo con PDFs y metadatos bibliográficos
 - [x] Añadir renombrado, movimiento y gestión segura de documentos y carpetas
 - [x] Corregir el desplazamiento y tamaño del editor de mensajes extensos
+- [x] Permitir adjuntar archivos en los anuncios
