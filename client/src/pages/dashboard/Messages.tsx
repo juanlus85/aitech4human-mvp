@@ -334,7 +334,7 @@ export default function Messages() {
 
         {/* Compose dialog */}
         <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
             <DialogHeader><DialogTitle className="font-serif">New Message</DialogTitle></DialogHeader>
             <form
               onSubmit={(e) => {
@@ -389,7 +389,7 @@ export default function Messages() {
                   value={composeForm.body}
                   onChange={(e) => setComposeForm({ ...composeForm, body: e.target.value })}
                   rows={14}
-                  className="flex-1 min-h-[16rem] resize-y"
+                  className="field-sizing-fixed flex-1 min-h-[16rem] max-h-[calc(100dvh-19rem)] resize-y overflow-y-auto"
                   required
                 />
               </div>
@@ -418,7 +418,7 @@ export default function Messages() {
 
         {/* Reply dialog */}
         <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
             <DialogHeader><DialogTitle className="font-serif">Reply</DialogTitle></DialogHeader>
             {!selectedMsg ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Loading message details…</p>
@@ -457,7 +457,7 @@ export default function Messages() {
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
                 rows={14}
-                className="flex-1 min-h-[16rem] resize-y"
+                className="field-sizing-fixed flex-1 min-h-[16rem] max-h-[calc(100dvh-23rem)] resize-y overflow-y-auto"
                 placeholder="Write your reply..."
                 required
               />
