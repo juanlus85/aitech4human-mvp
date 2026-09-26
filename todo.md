@@ -190,3 +190,4 @@
 - [x] Añadir renombrado, movimiento y gestión segura de documentos y carpetas
 - [x] Corregir el desplazamiento y tamaño del editor de mensajes extensos
 - [x] Permitir adjuntar archivos en los anuncios
+- [x] Sustituir el logotipo central de la plataforma

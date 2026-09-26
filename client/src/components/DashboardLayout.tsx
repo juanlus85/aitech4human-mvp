@@ -57,7 +57,7 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
-const BUILD_LABEL = "Versión v68 · 26/09/2026 12:24";
+const BUILD_LABEL = "Versión v69. 26/09/2026 12:31";
 
 const mainNav = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -106,7 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full glass-card rounded-2xl bracket-accent">
-          <img src="/uploads/logo.png" alt="AI&Tech4Human" className="w-16 h-16 object-contain" />
+          <img src="/uploads/aitech4human-logo.png" alt="AI&Tech4Human Ulysseus R&I Group" className="w-40 max-w-full h-auto object-contain" />
           <div className="text-center">
             <h1 className="font-serif text-2xl font-semibold text-foreground">Member Area</h1>
             <p className="text-sm text-muted-foreground mt-2">
@@ -218,7 +218,7 @@ function DashboardLayoutContent({
                 className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors shrink-0"
               >
                 {isCollapsed ? (
-                  <img src="/uploads/logo.png" alt="logo" className="h-6 w-6 object-contain" />
+                  <img src="/uploads/aitech4human-logo.png" alt="AI&Tech4Human" className="h-6 w-6 object-contain" />
                 ) : (
                   <PanelLeft className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -226,8 +226,8 @@ function DashboardLayoutContent({
               {!isCollapsed && (
                 <div className="flex items-center min-w-0">
                   <img
-                    src="/uploads/logo.png"
-                    alt="AI&Tech4Human"
+                    src="/uploads/aitech4human-logo.png"
+                    alt="AI&Tech4Human Ulysseus R&I Group"
                     className="h-7 w-auto object-contain"
                   />
                 </div>
