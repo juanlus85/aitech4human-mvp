@@ -275,6 +275,24 @@ export const announcementAttachments = mysqlTable("announcementAttachments", {
 
 export type AnnouncementAttachment = typeof announcementAttachments.$inferSelect;
 
+export const announcementReactions = mysqlTable("announcementReactions", {
+  id: int("id").autoincrement().primaryKey(),
+  targetType: mysqlEnum("targetType", ["announcement", "reply"]).notNull(),
+  targetId: int("targetId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reactionType: mysqlEnum("reactionType", ["heart", "thumbs_up"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  reactionUnique: uniqueIndex("announcementReactions_target_user_type_unique").on(
+    table.targetType,
+    table.targetId,
+    table.userId,
+    table.reactionType,
+  ),
+}));
+
+export type AnnouncementReaction = typeof announcementReactions.$inferSelect;
+
 // ─── Papers ───────────────────────────────────────────────────────────────────
 
 export const papers = mysqlTable("papers", {

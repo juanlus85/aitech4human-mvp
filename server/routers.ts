@@ -29,6 +29,7 @@ import {
   getAllAnnouncements, getAnnouncementById, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
   getAnnouncementAttachments, getAnnouncementAttachmentById, createAnnouncementAttachment, deleteAnnouncementAttachment,
+  getAnnouncementReactions, getAnnouncementReaction, createAnnouncementReaction, deleteAnnouncementReaction,
   getAllLinks, createLink, deleteLink, updateLink,
   getCommProposalAttendance, upsertCommProposalAttendance, removeCommProposalAttendance,
   getCongressAttendance, upsertCongressAttendance, removeCongressAttendance,
@@ -1311,7 +1312,8 @@ const announcementsRouter = router({
       if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
       const replies = await getAnnouncementReplies(input.id);
       const attachments = await getAnnouncementAttachments(input.id);
-      return { ...ann, replies, attachments };
+      const reactions = await getAnnouncementReactions("announcement", [input.id]);
+      return { ...ann, replies, attachments, reactions };
     }),
 
   create: protectedProcedure
@@ -1394,6 +1396,39 @@ const announcementsRouter = router({
       await deleteAnnouncementAttachment(input.id);
       await storageDelete(attachment.fileKey);
       return { success: true };
+    }),
+
+  toggleReaction: protectedProcedure
+    .input(z.object({
+      announcementId: z.number(),
+      replyId: z.number().optional(),
+      reactionType: z.enum(["heart", "thumbs_up"]),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const announcement = await getAnnouncementById(input.announcementId);
+      if (!announcement) throw new TRPCError({ code: "NOT_FOUND", message: "Announcement not found." });
+
+      const targetType = input.replyId ? "reply" : "announcement";
+      const targetId = input.replyId ?? input.announcementId;
+      if (input.replyId) {
+        const replies = await getAnnouncementReplies(input.announcementId);
+        if (!replies.some((reply) => reply.id === input.replyId)) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Reply not found in this announcement." });
+        }
+      }
+
+      const existing = await getAnnouncementReaction(targetType, targetId, ctx.user.id, input.reactionType);
+      if (existing) {
+        await deleteAnnouncementReaction(existing.id);
+        return { active: false };
+      }
+      await createAnnouncementReaction({
+        targetType,
+        targetId,
+        userId: ctx.user.id,
+        reactionType: input.reactionType,
+      });
+      return { active: true };
     }),
 
   reply: protectedProcedure

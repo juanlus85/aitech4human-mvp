@@ -71,6 +71,13 @@
       "when": 1790413555787,
       "tag": "0009_shallow_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1790419602540,
+      "tag": "0010_cool_kulan_gath",
+      "breakpoints": true
     }
   ]
 }

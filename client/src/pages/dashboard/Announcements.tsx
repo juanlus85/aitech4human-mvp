@@ -123,6 +123,71 @@ function AnnouncementAttachmentPicker({
   );
 }
 
+type AnnouncementReaction = {
+  id: number;
+  targetId: number;
+  userId: number;
+  reactionType: "heart" | "thumbs_up";
+  userName?: string | null;
+};
+
+function ReactionBar({
+  announcementId,
+  replyId,
+  reactions,
+  currentUserId,
+}: {
+  announcementId: number;
+  replyId?: number;
+  reactions?: AnnouncementReaction[];
+  currentUserId?: number;
+}) {
+  const utils = trpc.useUtils();
+  const allReactions = reactions ?? [];
+  const toggleReaction = trpc.announcements.toggleReaction.useMutation({
+    onSuccess: () => {
+      utils.announcements.list.invalidate();
+      utils.announcements.getById.invalidate({ id: announcementId });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const actions = [
+    { type: "heart" as const, label: "Heart", emoji: "❤️" },
+    { type: "thumbs_up" as const, label: "Thumbs up", emoji: "👍" },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
+      {actions.map(({ type, label, emoji }) => {
+        const participants = allReactions.filter((reaction) => reaction.reactionType === type);
+        const reactedByCurrentUser = participants.some((reaction) => reaction.userId === currentUserId);
+        const participantNames = participants.map((reaction) => reaction.userName || `Member ${reaction.userId}`);
+        const tooltip = participantNames.length > 0
+          ? `${label}: ${participantNames.join(", ")}`
+          : `Add ${label.toLowerCase()} reaction`;
+        return (
+          <button
+            key={type}
+            type="button"
+            title={tooltip}
+            aria-label={tooltip}
+            aria-pressed={reactedByCurrentUser}
+            disabled={toggleReaction.isPending}
+            onClick={() => toggleReaction.mutate({ announcementId, ...(replyId ? { replyId } : {}), reactionType: type })}
+            className={`inline-flex min-h-7 items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
+              reactedByCurrentUser ? "border-primary/40 bg-primary/10 text-primary" : "border-border/70 bg-background/70 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            }`}
+          >
+            <span aria-hidden="true" className="text-sm leading-none">{emoji}</span>
+            <span>{participants.length}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Announcements() {
   return (
     <DashboardLayout>
@@ -318,9 +383,10 @@ function AnnouncementsContent() {
 
                 {/* Replies toggle */}
                 <div className="border-t border-border/50 px-5 py-2.5 flex items-center gap-4 bg-muted/20">
+                  <ReactionBar announcementId={ann.id} reactions={ann.reactions} currentUserId={user?.id} />
                   <button
                     onClick={() => toggleReplies(ann.id)}
-                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Reply className="w-4 h-4" />
                     <span>{getReplyLabel(ann.replyCount ?? 0)}</span>
@@ -399,7 +465,7 @@ function ThreadSection({
   isAdmin,
 }: {
   announcementId: number;
-  detail: { replies: Array<{ id: number; authorId: number; authorName?: string | null; body: string; createdAt: Date | string }> };
+  detail: { replies: Array<{ id: number; authorId: number; authorName?: string | null; body: string; createdAt: Date | string; reactions?: AnnouncementReaction[] }> };
   currentUserId?: number;
   isAdmin: boolean;
 }) {
@@ -448,6 +514,9 @@ function ThreadSection({
                   )}
                 </div>
                 <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap">{reply.body}</p>
+                <div className="mt-2">
+                  <ReactionBar announcementId={announcementId} replyId={reply.id} reactions={reply.reactions} currentUserId={currentUserId} />
+                </div>
               </div>
             </div>
           ))}

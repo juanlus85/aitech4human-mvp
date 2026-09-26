@@ -1,4 +1,4 @@
-import { aliasedTable, and, asc, desc, eq, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
@@ -10,7 +10,7 @@ import {
   documents, documentFolders,
   researchRepositoryItems, researchRepositoryParticipants,
   tasks, notifications,
-  announcements, announcementReplies, announcementAttachments,
+  announcements, announcementReplies, announcementAttachments, announcementReactions,
   appSettings,
   links,
   projectProposals, projectProposalInterests,
@@ -979,9 +979,11 @@ export async function getAllAnnouncements() {
     .from(announcements)
     .leftJoin(users, eq(announcements.authorId, users.id))
     .orderBy(desc(announcements.isPinned), desc(announcements.createdAt));
+  const reactions = await getAnnouncementReactions("announcement", rows.map((announcement) => announcement.id));
   return Promise.all(rows.map(async (announcement) => ({
     ...announcement,
     attachments: await getAnnouncementAttachments(announcement.id),
+    reactions: reactions.filter((reaction) => reaction.targetId === announcement.id),
   })));
 }
 
@@ -1023,6 +1025,18 @@ export async function updateAnnouncement(id: number, data: Partial<typeof announ
 export async function deleteAnnouncement(id: number) {
   const db = await getDb();
   if (!db) return;
+  const replies = await db.select({ id: announcementReplies.id }).from(announcementReplies)
+    .where(eq(announcementReplies.announcementId, id));
+  await db.delete(announcementReactions).where(and(
+    eq(announcementReactions.targetType, "announcement"),
+    eq(announcementReactions.targetId, id),
+  ));
+  if (replies.length > 0) {
+    await db.delete(announcementReactions).where(and(
+      eq(announcementReactions.targetType, "reply"),
+      inArray(announcementReactions.targetId, replies.map((reply) => reply.id)),
+    ));
+  }
   await db.delete(announcementAttachments).where(eq(announcementAttachments.announcementId, id));
   await db.delete(announcements).where(eq(announcements.id, id));
 }
@@ -1044,7 +1058,11 @@ export async function getAnnouncementReplies(announcementId: number) {
     .leftJoin(users, eq(announcementReplies.authorId, users.id))
     .where(eq(announcementReplies.announcementId, announcementId))
     .orderBy(announcementReplies.createdAt);
-  return rows;
+  const reactions = await getAnnouncementReactions("reply", rows.map((reply) => reply.id));
+  return rows.map((reply) => ({
+    ...reply,
+    reactions: reactions.filter((reaction) => reaction.targetId === reply.id),
+  }));
 }
 
 export async function createAnnouncementReply(data: typeof announcementReplies.$inferInsert) {
@@ -1058,7 +1076,64 @@ export async function createAnnouncementReply(data: typeof announcementReplies.$
 export async function deleteAnnouncementReply(id: number) {
   const db = await getDb();
   if (!db) return;
+  await db.delete(announcementReactions).where(and(
+    eq(announcementReactions.targetType, "reply"),
+    eq(announcementReactions.targetId, id),
+  ));
   await db.delete(announcementReplies).where(eq(announcementReplies.id, id));
+}
+
+export type AnnouncementReactionTarget = "announcement" | "reply";
+export type AnnouncementReactionKind = "heart" | "thumbs_up";
+
+export async function getAnnouncementReactions(targetType: AnnouncementReactionTarget, targetIds: number[]) {
+  const db = await getDb();
+  if (!db || targetIds.length === 0) return [];
+  return db.select({
+    id: announcementReactions.id,
+    targetType: announcementReactions.targetType,
+    targetId: announcementReactions.targetId,
+    userId: announcementReactions.userId,
+    reactionType: announcementReactions.reactionType,
+    createdAt: announcementReactions.createdAt,
+    userName: users.name,
+  })
+    .from(announcementReactions)
+    .leftJoin(users, eq(announcementReactions.userId, users.id))
+    .where(and(
+      eq(announcementReactions.targetType, targetType),
+      inArray(announcementReactions.targetId, targetIds),
+    ))
+    .orderBy(announcementReactions.createdAt);
+}
+
+export async function getAnnouncementReaction(
+  targetType: AnnouncementReactionTarget,
+  targetId: number,
+  userId: number,
+  reactionType: AnnouncementReactionKind,
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(announcementReactions).where(and(
+    eq(announcementReactions.targetType, targetType),
+    eq(announcementReactions.targetId, targetId),
+    eq(announcementReactions.userId, userId),
+    eq(announcementReactions.reactionType, reactionType),
+  )).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createAnnouncementReaction(data: typeof announcementReactions.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(announcementReactions).values(sanitize(data));
+}
+
+export async function deleteAnnouncementReaction(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcementReactions).where(eq(announcementReactions.id, id));
 }
 
 export async function getAnnouncementAttachments(announcementId: number) {
