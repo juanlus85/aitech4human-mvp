@@ -186,3 +186,4 @@
 - [x] Añadir pruebas de enlaces absolutos y encabezados de entrega de correo
 - [x] Añadir directorio interno de miembros con ficha completa y acceso directo a mensajería
 - [x] Corregir el recorte de fotografías de perfil para que los avatares no se deformen
+- [x] Crear repositorio académico colaborativo con PDFs y metadatos bibliográficos

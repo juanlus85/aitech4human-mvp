@@ -118,6 +118,23 @@ export async function storagePut(
   return localPut(relKey, data, contentType);
 }
 
+/** Removes a locally stored file when its owning record is replaced or deleted. */
+export async function storageDelete(relKey: string): Promise<void> {
+  if (isForgeAvailable()) {
+    // The Forge storage adapter exposes no deletion endpoint. Production Plesk
+    // deployments use the local branch below, which removes the physical file.
+    return;
+  }
+
+  const fileName = normalizeKey(relKey).replace(/\//g, "_");
+  const filePath = path.join(getUploadDir(), fileName);
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (error: any) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
+
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
   if (isForgeAvailable()) {

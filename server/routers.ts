@@ -21,6 +21,8 @@ import {
   getEventInterests, toggleEventInterest,
   getAllDocuments, getDocumentById, createDocument, deleteDocument,
   getAllFolders, createFolder,
+  getRepositoryItems, getRepositoryItemDetail, getRepositoryItemById, getRepositoryParticipants,
+  createRepositoryItem, updateRepositoryItem, deleteRepositoryItem, setRepositoryParticipants,
   getAllTasks, createTask, updateTask, deleteTask,
   getNotificationsForUser, markNotificationRead,
   markAllNotificationsRead, getUnreadNotificationCount,
@@ -35,7 +37,7 @@ import {
   getAllResearchLines, createResearchLine, updateResearchLine, deleteResearchLine,
   joinResearchLine, leaveResearchLine,
 } from "./db";
-import { storagePut } from "./storage";
+import { storageDelete, storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
 import { getPlatformUrl, notifyMembers, sendEmail } from "./email";
 import { getAllUserEmails } from "./db";
@@ -960,6 +962,101 @@ const documentsRouter = router({
     .mutation(({ input, ctx }) => createFolder({ ...input, creatorId: ctx.user.id })),
 });
 
+// ─── Academic Repository Router ───────────────────────────────────────────────
+
+const repositoryTypeSchema = z.enum(["poster", "paper", "book", "book_chapter", "report", "other"]);
+const repositoryFieldsSchema = z.object({
+  type: repositoryTypeSchema.default("paper"),
+  title: z.string().min(1),
+  authors: z.string().optional(),
+  citation: z.string().optional(),
+  abstract: z.string().optional(),
+  publicationDate: z.coerce.date().optional(),
+  publicationVenue: z.string().optional(),
+  publisher: z.string().optional(),
+  volume: z.string().optional(),
+  issue: z.string().optional(),
+  pages: z.string().optional(),
+  isbn: z.string().optional(),
+  doi: z.string().optional(),
+  externalUrl: z.string().url().optional().or(z.literal("")),
+  keywords: z.string().optional(),
+  language: z.string().optional(),
+  notes: z.string().optional(),
+  pdfFileName: z.string().optional(),
+  pdfFileKey: z.string().optional(),
+  pdfFileUrl: z.string().optional(),
+  pdfFileSize: z.number().optional(),
+});
+
+async function canManageRepositoryItem(itemId: number, userId: number, role: "admin" | "member") {
+  const item = await getRepositoryItemById(itemId);
+  if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Repository entry not found" });
+  if (role === "admin" || item.creatorId === userId) return item;
+  const participants = await getRepositoryParticipants(itemId);
+  if (participants.some((participant) => participant.userId === userId)) return item;
+  throw new TRPCError({ code: "FORBIDDEN", message: "Only collaborators can manage this entry" });
+}
+
+async function ensureRepositoryParticipantsAvailable(userIds: number[]) {
+  const selectedUsers = await Promise.all(Array.from(new Set(userIds)).map((userId) => getUserById(userId)));
+  if (selectedUsers.some((selectedUser) => !selectedUser?.isActive)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "One or more selected members are unavailable." });
+  }
+}
+
+const repositoryRouter = router({
+  list: protectedProcedure.query(() => getRepositoryItems()),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(({ input }) => getRepositoryItemDetail(input.id)),
+
+  create: protectedProcedure
+    .input(repositoryFieldsSchema.extend({ participantIds: z.array(z.number()).default([]) }))
+    .mutation(async ({ input, ctx }) => {
+      const { participantIds, externalUrl, ...data } = input;
+      await ensureRepositoryParticipantsAvailable(participantIds);
+      const item = await createRepositoryItem({
+        ...data,
+        externalUrl: externalUrl || undefined,
+        creatorId: ctx.user.id,
+      });
+      if (item) {
+        await setRepositoryParticipants(item.id, [ctx.user.id, ...participantIds]);
+      }
+      return item;
+    }),
+
+  update: protectedProcedure
+    .input(repositoryFieldsSchema.partial().extend({ id: z.number(), participantIds: z.array(z.number()).optional(), removePdf: z.boolean().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const item = await canManageRepositoryItem(input.id, ctx.user.id, ctx.user.role);
+      const { id, participantIds, externalUrl, removePdf, ...data } = input;
+      if (participantIds) await ensureRepositoryParticipantsAvailable(participantIds);
+      const pdfFields = removePdf
+        ? { pdfFileName: undefined, pdfFileKey: undefined, pdfFileUrl: undefined, pdfFileSize: undefined }
+        : {};
+      await updateRepositoryItem(id, { ...data, ...pdfFields, externalUrl: externalUrl || undefined });
+      if (participantIds) {
+        await setRepositoryParticipants(id, [item.creatorId, ...participantIds]);
+      }
+      if ((removePdf || (data.pdfFileKey && data.pdfFileKey !== item.pdfFileKey)) && item.pdfFileKey) {
+        await storageDelete(item.pdfFileKey);
+      }
+      return getRepositoryItemDetail(id);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const item = await canManageRepositoryItem(input.id, ctx.user.id, ctx.user.role);
+      await deleteRepositoryItem(input.id);
+      if (item.pdfFileKey) await storageDelete(item.pdfFileKey);
+      return { success: true };
+    }),
+});
+
 // ─── Tasks Router ─────────────────────────────────────────────────────────────
 
 const tasksRouter = router({
@@ -1421,6 +1518,7 @@ export const appRouter = router({
   papers: papersRouter,
   events: eventsRouter,
   documents: documentsRouter,
+  repository: repositoryRouter,
   tasks: tasksRouter,
   notifications: notificationsRouter,
   ai: aiRouter,

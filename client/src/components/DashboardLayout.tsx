@@ -77,6 +77,7 @@ const collaborationNav = [
 ];
 
 const resourcesNav = [
+  { icon: BookOpen, label: "Repository", path: "/dashboard/repository" },
   { icon: FileText, label: "Documents", path: "/dashboard/documents" },
   { icon: Link2, label: "Links", path: "/dashboard/links" },
   { icon: KanbanSquare, label: "Tasks", path: "/dashboard/tasks" },

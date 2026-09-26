@@ -8,6 +8,7 @@ import {
   papers, paperContributors,
   events, eventInterests,
   documents, documentFolders,
+  researchRepositoryItems, researchRepositoryParticipants,
   tasks, notifications,
   announcements, announcementReplies, announcementAttachments,
   appSettings,
@@ -718,6 +719,109 @@ export async function createFolder(data: typeof documentFolders.$inferInsert) {
   const db = await getDb();
   if (!db) return;
   await db.insert(documentFolders).values(sanitize(data));
+}
+
+// ─── Academic Repository ──────────────────────────────────────────────────────
+
+const repositoryCreatorAlias = aliasedTable(users, "repository_creator");
+
+export async function getRepositoryItems() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: researchRepositoryItems.id,
+      creatorId: researchRepositoryItems.creatorId,
+      type: researchRepositoryItems.type,
+      title: researchRepositoryItems.title,
+      authors: researchRepositoryItems.authors,
+      citation: researchRepositoryItems.citation,
+      abstract: researchRepositoryItems.abstract,
+      publicationDate: researchRepositoryItems.publicationDate,
+      publicationVenue: researchRepositoryItems.publicationVenue,
+      publisher: researchRepositoryItems.publisher,
+      doi: researchRepositoryItems.doi,
+      externalUrl: researchRepositoryItems.externalUrl,
+      keywords: researchRepositoryItems.keywords,
+      pdfFileName: researchRepositoryItems.pdfFileName,
+      pdfFileUrl: researchRepositoryItems.pdfFileUrl,
+      createdAt: researchRepositoryItems.createdAt,
+      updatedAt: researchRepositoryItems.updatedAt,
+      creatorName: repositoryCreatorAlias.name,
+    })
+    .from(researchRepositoryItems)
+    .leftJoin(repositoryCreatorAlias, eq(repositoryCreatorAlias.id, researchRepositoryItems.creatorId))
+    .orderBy(desc(researchRepositoryItems.publicationDate), desc(researchRepositoryItems.createdAt));
+  return Promise.all(rows.map(async (item) => ({
+    ...item,
+    participants: await getRepositoryParticipants(item.id),
+  })));
+}
+
+export async function getRepositoryItemById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(researchRepositoryItems).where(eq(researchRepositoryItems.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getRepositoryParticipants(repositoryItemId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: researchRepositoryParticipants.id,
+      userId: researchRepositoryParticipants.userId,
+      role: researchRepositoryParticipants.role,
+      name: users.name,
+      email: users.email,
+    })
+    .from(researchRepositoryParticipants)
+    .innerJoin(users, eq(users.id, researchRepositoryParticipants.userId))
+    .where(eq(researchRepositoryParticipants.repositoryItemId, repositoryItemId))
+    .orderBy(asc(users.name));
+}
+
+export async function getRepositoryItemDetail(id: number) {
+  const item = await getRepositoryItemById(id);
+  if (!item) return null;
+  const [creator, participants] = await Promise.all([
+    getUserById(item.creatorId),
+    getRepositoryParticipants(id),
+  ]);
+  return { ...item, creatorName: creator?.name ?? null, participants };
+}
+
+export async function createRepositoryItem(data: typeof researchRepositoryItems.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(researchRepositoryItems).values(sanitize(data));
+  const rows = await db.select().from(researchRepositoryItems).orderBy(desc(researchRepositoryItems.id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateRepositoryItem(id: number, data: Partial<typeof researchRepositoryItems.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(researchRepositoryItems).set(sanitize(data)).where(eq(researchRepositoryItems.id, id));
+}
+
+export async function deleteRepositoryItem(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(researchRepositoryItems).where(eq(researchRepositoryItems.id, id));
+}
+
+export async function setRepositoryParticipants(repositoryItemId: number, userIds: number[]) {
+  const db = await getDb();
+  if (!db) return;
+  const uniqueUserIds = Array.from(new Set(userIds));
+  await db.delete(researchRepositoryParticipants).where(eq(researchRepositoryParticipants.repositoryItemId, repositoryItemId));
+  if (uniqueUserIds.length > 0) {
+    await db.insert(researchRepositoryParticipants).values(
+      uniqueUserIds.map((userId) => ({ repositoryItemId, userId, role: "author" as const })),
+    );
+  }
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────

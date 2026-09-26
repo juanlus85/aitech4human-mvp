@@ -9,6 +9,7 @@ import {
   timestamp,
   varchar,
   bigint,
+  foreignKey,
   uniqueIndex,
 } from "drizzle-orm/mysql-core";
 
@@ -358,6 +359,61 @@ export const documentFolders = mysqlTable("documentFolders", {
   name: varchar("name", { length: 255 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ─── Academic Repository ──────────────────────────────────────────────────────
+
+export const researchRepositoryItems = mysqlTable("researchRepositoryItems", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: mysqlEnum("type", ["poster", "paper", "book", "book_chapter", "report", "other"]).default("paper").notNull(),
+  title: varchar("title", { length: 512 }).notNull(),
+  authors: text("authors"),
+  citation: text("citation"),
+  abstract: text("abstract"),
+  publicationDate: datetime("publicationDate"),
+  publicationVenue: varchar("publicationVenue", { length: 512 }),
+  publisher: varchar("publisher", { length: 512 }),
+  volume: varchar("volume", { length: 64 }),
+  issue: varchar("issue", { length: 64 }),
+  pages: varchar("pages", { length: 128 }),
+  isbn: varchar("isbn", { length: 64 }),
+  doi: varchar("doi", { length: 255 }),
+  externalUrl: text("externalUrl"),
+  keywords: text("keywords"),
+  language: varchar("language", { length: 64 }),
+  notes: text("notes"),
+  pdfFileName: varchar("pdfFileName", { length: 512 }),
+  pdfFileKey: text("pdfFileKey"),
+  pdfFileUrl: text("pdfFileUrl"),
+  pdfFileSize: bigint("pdfFileSize", { mode: "number" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ResearchRepositoryItem = typeof researchRepositoryItems.$inferSelect;
+export type InsertResearchRepositoryItem = typeof researchRepositoryItems.$inferInsert;
+
+export const researchRepositoryParticipants = mysqlTable("researchRepositoryParticipants", {
+  id: int("id").autoincrement().primaryKey(),
+  repositoryItemId: int("repositoryItemId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["author", "editor", "contributor"]).default("author").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  repositoryItemUserUnique: uniqueIndex("researchRepositoryParticipants_item_user_unique").on(table.repositoryItemId, table.userId),
+  repositoryItemFk: foreignKey({
+    name: "repositoryParticipants_item_fk",
+    columns: [table.repositoryItemId],
+    foreignColumns: [researchRepositoryItems.id],
+  }).onDelete("cascade"),
+  userFk: foreignKey({
+    name: "repositoryParticipants_user_fk",
+    columns: [table.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
+}));
+
+export type ResearchRepositoryParticipant = typeof researchRepositoryParticipants.$inferSelect;
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 

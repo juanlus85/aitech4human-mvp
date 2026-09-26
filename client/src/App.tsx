@@ -26,6 +26,7 @@ import Meetings from "./pages/dashboard/Meetings";
 import Congresses from "./pages/dashboard/Congresses";
 import Papers from "./pages/dashboard/Papers";
 import Events from "./pages/dashboard/Events";
+import ResearchRepository from "./pages/dashboard/ResearchRepository";
 import Documents from "./pages/dashboard/Documents";
 import Links from "./pages/dashboard/Links";
 import Tasks from "./pages/dashboard/Tasks";
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/dashboard/congresses" component={Congresses} />
       <Route path="/dashboard/papers" component={Papers} />
       <Route path="/dashboard/events" component={Events} />
+      <Route path="/dashboard/repository" component={ResearchRepository} />
       <Route path="/dashboard/documents" component={Documents} />
       <Route path="/dashboard/links" component={Links} />
       <Route path="/dashboard/tasks" component={Tasks} />

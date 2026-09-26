@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
+import path from "path";
 import { getUserFromToken } from "./auth";
 import { upsertProfile } from "./db";
 import { storagePut } from "./storage";
@@ -54,6 +55,36 @@ router.post(
       res.json({ url });
     } catch (err: any) {
       console.error("[upload/cv]", err);
+      res.status(500).json({ error: err.message ?? "Upload failed" });
+    }
+  }
+);
+
+// POST /api/upload/repository-pdf  — multipart field: "pdf"
+router.post(
+  "/repository-pdf",
+  upload.single("pdf"),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+      if (!req.file) { res.status(400).json({ error: "No PDF provided" }); return; }
+
+      const isPdf = req.file.mimetype === "application/pdf" || /\.pdf$/i.test(req.file.originalname);
+      if (!isPdf) { res.status(400).json({ error: "Only PDF files are accepted" }); return; }
+
+      const safeFileName = path.basename(req.file.originalname).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const key = `repository/${user.id}/${Date.now()}-${safeFileName}`;
+      const { key: storedKey, url } = await storagePut(key, req.file.buffer, "application/pdf");
+      res.json({
+        fileName: req.file.originalname,
+        fileKey: storedKey,
+        fileUrl: url,
+        fileSize: req.file.size,
+        mimeType: "application/pdf",
+      });
+    } catch (err: any) {
+      console.error("[upload/repository-pdf]", err);
       res.status(500).json({ error: err.message ?? "Upload failed" });
     }
   }
