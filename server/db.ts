@@ -971,6 +971,10 @@ export async function getAllAnnouncements() {
       createdAt: announcements.createdAt,
       updatedAt: announcements.updatedAt,
       authorName: users.name,
+      replyCount: sql<number>`(
+        SELECT COUNT(*) FROM ${announcementReplies}
+        WHERE ${announcementReplies.announcementId} = ${announcements.id}
+      )`,
     })
     .from(announcements)
     .leftJoin(users, eq(announcements.authorId, users.id))

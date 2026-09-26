@@ -187,6 +187,11 @@ function AnnouncementsContent() {
     setSelectedId(id);
   };
 
+  const getReplyLabel = (replyCount: number) => {
+    if (replyCount <= 0) return "Reply";
+    return `Reply (${replyCount} ${replyCount === 1 ? "reply" : "replies"})`;
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -318,7 +323,7 @@ function AnnouncementsContent() {
                     className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Reply className="w-4 h-4" />
-                    <span>Reply</span>
+                    <span>{getReplyLabel(ann.replyCount ?? 0)}</span>
                     {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                   </button>
                 </div>
@@ -404,6 +409,7 @@ function ThreadSection({
   const replyMutation = trpc.announcements.reply.useMutation({
     onSuccess: () => {
       utils.announcements.getById.invalidate({ id: announcementId });
+      utils.announcements.list.invalidate();
       setReplyText("");
       toast.success("Reply posted");
     },
@@ -411,7 +417,10 @@ function ThreadSection({
   });
 
   const deleteReplyMutation = trpc.announcements.deleteReply.useMutation({
-    onSuccess: () => utils.announcements.getById.invalidate({ id: announcementId }),
+    onSuccess: () => {
+      utils.announcements.getById.invalidate({ id: announcementId });
+      utils.announcements.list.invalidate();
+    },
     onError: (e) => toast.error(e.message),
   });
 

@@ -191,3 +191,4 @@
 - [x] Corregir el desplazamiento y tamaño del editor de mensajes extensos
 - [x] Permitir adjuntar archivos en los anuncios
 - [x] Sustituir el logotipo central de la plataforma
+- [x] Mostrar el número de respuestas en cada anuncio
