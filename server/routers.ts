@@ -19,8 +19,8 @@ import {
   getPaperContributors, togglePaperContributor,
   getAllEvents, getEventById, createEvent, updateEvent, deleteEvent,
   getEventInterests, toggleEventInterest,
-  getAllDocuments, getDocumentById, createDocument, deleteDocument,
-  getAllFolders, createFolder,
+  getAllDocuments, getDocumentById, createDocument, deleteDocument, updateDocument,
+  getAllFolders, getFolderById, createFolder, updateFolder, deleteFolder,
   getRepositoryItems, getRepositoryItemDetail, getRepositoryItemById, getRepositoryParticipants,
   createRepositoryItem, updateRepositoryItem, deleteRepositoryItem, setRepositoryParticipants,
   getAllTasks, createTask, updateTask, deleteTask,
@@ -954,12 +954,54 @@ const documentsRouter = router({
       if (doc.uploaderId !== ctx.user.id && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      return deleteDocument(input.id);
+      await deleteDocument(input.id);
+      if (doc.fileKey) await storageDelete(doc.fileKey);
+      return { success: true };
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      fileName: z.string().trim().min(1).max(512).optional(),
+      folderId: z.number().nullable().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const doc = await getDocumentById(input.id);
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND" });
+      if (doc.uploaderId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      if (input.folderId !== undefined && input.folderId !== null && !(await getFolderById(input.folderId))) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "The selected folder no longer exists." });
+      }
+      const { id, ...data } = input;
+      await updateDocument(id, data);
+      return getDocumentById(id);
     }),
 
   createFolder: protectedProcedure
     .input(z.object({ name: z.string().min(1), parentId: z.number().optional() }))
     .mutation(({ input, ctx }) => createFolder({ ...input, creatorId: ctx.user.id })),
+
+  updateFolder: protectedProcedure
+    .input(z.object({ id: z.number(), name: z.string().trim().min(1).max(255) }))
+    .mutation(async ({ input, ctx }) => {
+      const folder = await getFolderById(input.id);
+      if (!folder) throw new TRPCError({ code: "NOT_FOUND" });
+      if (folder.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await updateFolder(input.id, { name: input.name });
+      return getFolderById(input.id);
+    }),
+
+  deleteFolder: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const folder = await getFolderById(input.id);
+      if (!folder) throw new TRPCError({ code: "NOT_FOUND" });
+      if (folder.creatorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await deleteFolder(input.id);
+      return { success: true };
+    }),
 });
 
 // ─── Academic Repository Router ───────────────────────────────────────────────

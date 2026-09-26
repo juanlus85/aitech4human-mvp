@@ -709,6 +709,12 @@ export async function deleteDocument(id: number) {
   await db.delete(documents).where(eq(documents.id, id));
 }
 
+export async function updateDocument(id: number, data: Partial<typeof documents.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(documents).set(sanitize(data)).where(eq(documents.id, id));
+}
+
 export async function getAllFolders() {
   const db = await getDb();
   if (!db) return [];
@@ -719,6 +725,31 @@ export async function createFolder(data: typeof documentFolders.$inferInsert) {
   const db = await getDb();
   if (!db) return;
   await db.insert(documentFolders).values(sanitize(data));
+}
+
+export async function getFolderById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentFolders).where(eq(documentFolders.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateFolder(id: number, data: Partial<typeof documentFolders.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(documentFolders).set(sanitize(data)).where(eq(documentFolders.id, id));
+}
+
+/**
+ * Remove a folder without deleting its documents. Files and any child folders
+ * are detached to the root level before the folder row is removed.
+ */
+export async function deleteFolder(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(documents).set({ folderId: null }).where(eq(documents.folderId, id));
+  await db.update(documentFolders).set({ parentId: null }).where(eq(documentFolders.parentId, id));
+  await db.delete(documentFolders).where(eq(documentFolders.id, id));
 }
 
 // ─── Academic Repository ──────────────────────────────────────────────────────
