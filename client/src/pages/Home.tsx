@@ -93,19 +93,23 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 stagger-children">
               {previewMembers.map((m) => (
                 <Link key={m.userId} href={`/members/${m.userId}`}>
-                  <div className="glass-card rounded-xl p-4 text-center hover:shadow-md transition-all duration-200 cursor-pointer group animate-fade-in-up">
+                  <div className="glass-card flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl p-4 text-center transition-all duration-200 cursor-pointer group animate-fade-in-up hover:shadow-md">
                     <Avatar className="w-14 h-14 mx-auto mb-3 ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
                       <AvatarImage src={m.photoUrl ?? undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary font-serif text-lg">
                         {m.name?.charAt(0) ?? "?"}
                       </AvatarFallback>
                     </Avatar>
-                    <p className="font-serif text-sm font-medium text-foreground leading-tight">{m.name}</p>
+                    <p className="font-serif text-sm font-medium text-foreground leading-tight line-clamp-2">{m.name}</p>
                     {m.university && (
                       <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight line-clamp-2">{m.university}</p>
                     )}
                     {m.researchArea && (
-                      <Badge variant="secondary" className="mt-2 text-[10px] px-1.5 py-0">{m.researchArea}</Badge>
+                      <div className="mt-auto min-w-0 pt-2">
+                        <Badge variant="secondary" className="max-w-full min-w-0 px-1.5 py-0 text-[10px]">
+                          <span className="truncate">{m.researchArea}</span>
+                        </Badge>
+                      </div>
                     )}
                   </div>
                 </Link>
