@@ -465,18 +465,28 @@ function ThreadSection({
   isAdmin,
 }: {
   announcementId: number;
-  detail: { replies: Array<{ id: number; authorId: number; authorName?: string | null; body: string; createdAt: Date | string; reactions?: AnnouncementReaction[] }> };
+  detail: { replies: Array<{
+    id: number;
+    authorId: number;
+    authorName?: string | null;
+    body: string;
+    createdAt: Date | string;
+    reactions?: AnnouncementReaction[];
+    attachments?: Array<{ id: number; fileName: string; fileUrl: string; fileSize?: number | null }>;
+  }> };
   currentUserId?: number;
   isAdmin: boolean;
 }) {
   const utils = trpc.useUtils();
   const [replyText, setReplyText] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState<PendingAttachment[]>([]);
 
   const replyMutation = trpc.announcements.reply.useMutation({
     onSuccess: () => {
       utils.announcements.getById.invalidate({ id: announcementId });
       utils.announcements.list.invalidate();
       setReplyText("");
+      setReplyAttachments([]);
       toast.success("Reply posted");
     },
     onError: (e) => toast.error(e.message),
@@ -488,6 +498,15 @@ function ThreadSection({
       utils.announcements.list.invalidate();
     },
     onError: (e) => toast.error(e.message),
+  });
+
+  const deleteAttachmentMutation = trpc.announcements.deleteAttachment.useMutation({
+    onSuccess: () => {
+      utils.announcements.getById.invalidate({ id: announcementId });
+      utils.announcements.list.invalidate();
+      toast.success("Attachment deleted");
+    },
+    onError: (error) => toast.error(error.message),
   });
 
   return (
@@ -514,6 +533,35 @@ function ThreadSection({
                   )}
                 </div>
                 <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap">{reply.body}</p>
+                {reply.attachments && reply.attachments.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Attachments</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {reply.attachments.map((attachment) => (
+                        <div key={attachment.id} className="flex max-w-full items-center gap-1 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-xs">
+                          <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <a href={attachment.fileUrl} target="_blank" rel="noopener noreferrer" className="max-w-[13rem] truncate text-primary hover:underline" title={attachment.fileName}>
+                            {attachment.fileName}
+                          </a>
+                          <span className="text-muted-foreground">{formatBytes(attachment.fileSize)}</span>
+                          <a href={attachment.fileUrl} target="_blank" rel="noopener noreferrer" aria-label={`Download ${attachment.fileName}`} className="ml-0.5 text-muted-foreground hover:text-foreground">
+                            <Download className="h-3 w-3" />
+                          </a>
+                          {(reply.authorId === currentUserId || isAdmin) && (
+                            <button
+                              type="button"
+                              aria-label={`Delete ${attachment.fileName}`}
+                              onClick={() => { if (confirm(`Delete attachment “${attachment.fileName}”?`)) deleteAttachmentMutation.mutate({ id: attachment.id }); }}
+                              className="ml-0.5 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="mt-2">
                   <ReactionBar announcementId={announcementId} replyId={reply.id} reactions={reply.reactions} currentUserId={currentUserId} />
                 </div>
@@ -525,23 +573,34 @@ function ThreadSection({
 
       {/* Reply input */}
       <div className="px-5 py-3 flex items-end gap-2 border-t border-border/30">
-        <Textarea
-          value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
-          placeholder="Write a reply..."
-          rows={2}
-          className="resize-none text-sm"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              if (replyText.trim()) replyMutation.mutate({ announcementId, body: replyText.trim() });
-            }
-          }}
-        />
+        <div className="flex-1 space-y-2">
+          <Textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Write a reply..."
+            rows={2}
+            className="resize-none text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (replyText.trim()) replyMutation.mutate({
+                  announcementId,
+                  body: replyText.trim(),
+                  attachments: replyAttachments.map(({ name, ...attachment }) => ({ ...attachment, fileName: name })),
+                });
+              }
+            }}
+          />
+          <AnnouncementAttachmentPicker attachments={replyAttachments} onChange={setReplyAttachments} inputId={`announcement-reply-${announcementId}-attachments`} disabled={replyMutation.isPending} />
+        </div>
         <Button
           size="sm"
           disabled={!replyText.trim() || replyMutation.isPending}
-          onClick={() => replyMutation.mutate({ announcementId, body: replyText.trim() })}
+          onClick={() => replyMutation.mutate({
+            announcementId,
+            body: replyText.trim(),
+            attachments: replyAttachments.map(({ name, ...attachment }) => ({ ...attachment, fileName: name })),
+          })}
           className="gap-1.5 shrink-0"
         >
           <Send className="w-3.5 h-3.5" />

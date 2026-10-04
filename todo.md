@@ -193,3 +193,4 @@
 - [x] Sustituir el logotipo central de la plataforma
 - [x] Mostrar el número de respuestas en cada anuncio
 - [x] Añadir reacciones de corazón y pulgar arriba en anuncios y respuestas
+- [x] Permitir adjuntar archivos en las respuestas de anuncios y mensajes privados

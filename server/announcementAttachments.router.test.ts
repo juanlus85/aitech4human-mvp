@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getAnnouncementById: vi.fn(),
   createAnnouncementAttachment: vi.fn(),
   getAnnouncementAttachments: vi.fn(),
+  getAllAttachmentsForAnnouncement: vi.fn(),
   getAnnouncementAttachmentById: vi.fn(),
   deleteAnnouncementAttachment: vi.fn(),
   deleteAnnouncement: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("./db", async (importOriginal) => {
     getAnnouncementById: mocks.getAnnouncementById,
     createAnnouncementAttachment: mocks.createAnnouncementAttachment,
     getAnnouncementAttachments: mocks.getAnnouncementAttachments,
+    getAllAttachmentsForAnnouncement: mocks.getAllAttachmentsForAnnouncement,
     getAnnouncementAttachmentById: mocks.getAnnouncementAttachmentById,
     deleteAnnouncementAttachment: mocks.deleteAnnouncementAttachment,
     deleteAnnouncement: mocks.deleteAnnouncement,
@@ -65,6 +67,7 @@ describe("announcement attachments", () => {
     mocks.getAnnouncementById.mockReset().mockResolvedValue({ id: 41, authorId: 1, subject: "Work plan" });
     mocks.createAnnouncementAttachment.mockReset().mockResolvedValue({ id: 83 });
     mocks.getAnnouncementAttachments.mockReset().mockResolvedValue([{ id: 83, announcementId: 41, fileKey: "announcements/41/work_plan.pdf" }]);
+    mocks.getAllAttachmentsForAnnouncement.mockReset().mockResolvedValue([{ id: 83, announcementId: 41, fileKey: "announcements/41/work_plan.pdf" }]);
     mocks.getAnnouncementAttachmentById.mockReset().mockResolvedValue({ id: 83, announcementId: 41, fileKey: "announcements/41/work_plan.pdf" });
     mocks.deleteAnnouncementAttachment.mockReset().mockResolvedValue(undefined);
     mocks.deleteAnnouncement.mockReset().mockResolvedValue(undefined);

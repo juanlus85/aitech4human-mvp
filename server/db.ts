@@ -1,4 +1,4 @@
-import { aliasedTable, and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
@@ -1059,10 +1059,18 @@ export async function getAnnouncementReplies(announcementId: number) {
     .where(eq(announcementReplies.announcementId, announcementId))
     .orderBy(announcementReplies.createdAt);
   const reactions = await getAnnouncementReactions("reply", rows.map((reply) => reply.id));
-  return rows.map((reply) => ({
+  return Promise.all(rows.map(async (reply) => ({
     ...reply,
     reactions: reactions.filter((reaction) => reaction.targetId === reply.id),
-  }));
+    attachments: await getAnnouncementReplyAttachments(reply.id),
+  })));
+}
+
+export async function getAnnouncementReplyById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(announcementReplies).where(eq(announcementReplies.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function createAnnouncementReply(data: typeof announcementReplies.$inferInsert) {
@@ -1080,6 +1088,7 @@ export async function deleteAnnouncementReply(id: number) {
     eq(announcementReactions.targetType, "reply"),
     eq(announcementReactions.targetId, id),
   ));
+  await db.delete(announcementAttachments).where(eq(announcementAttachments.replyId, id));
   await db.delete(announcementReplies).where(eq(announcementReplies.id, id));
 }
 
@@ -1140,8 +1149,26 @@ export async function getAnnouncementAttachments(announcementId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(announcementAttachments)
-    .where(eq(announcementAttachments.announcementId, announcementId))
+    .where(and(
+      eq(announcementAttachments.announcementId, announcementId),
+      isNull(announcementAttachments.replyId),
+    ))
     .orderBy(announcementAttachments.createdAt);
+}
+
+export async function getAnnouncementReplyAttachments(replyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(announcementAttachments)
+    .where(eq(announcementAttachments.replyId, replyId))
+    .orderBy(announcementAttachments.createdAt);
+}
+
+export async function getAllAttachmentsForAnnouncement(announcementId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(announcementAttachments)
+    .where(eq(announcementAttachments.announcementId, announcementId));
 }
 
 export async function getAnnouncementAttachmentById(id: number) {

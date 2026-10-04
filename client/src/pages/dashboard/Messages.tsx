@@ -29,7 +29,9 @@ export default function Messages() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; subject: string } | null>(null);
   const [hasAppliedRecipientPrefill, setHasAppliedRecipientPrefill] = useState(false);
   const attachRef = useRef<HTMLInputElement>(null);
+  const replyAttachRef = useRef<HTMLInputElement>(null);
   const [pendingAttachments, setPendingAttachments] = useState<{ name: string; base64: string; mimeType: string; size: number }[]>([]);
+  const [replyPendingAttachments, setReplyPendingAttachments] = useState<{ name: string; base64: string; mimeType: string; size: number }[]>([]);
 
   useEffect(() => {
     const messageParam = new URLSearchParams(window.location.search).get("message");
@@ -80,6 +82,7 @@ export default function Messages() {
       if (selectedId) utils.messages.getById.invalidate({ id: selectedId });
       setReplyOpen(false);
       setReplyBody("");
+      setReplyPendingAttachments([]);
       setReplyMode("sender");
       toast.success("Reply sent.");
     },
@@ -108,6 +111,20 @@ export default function Messages() {
       reader.onload = () => {
         const base64 = (reader.result as string).split(",")[1];
         setPendingAttachments((prev) => [...prev, { name: file.name, base64, mimeType: file.type, size: file.size }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleReplyAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        if (!base64) return;
+        setReplyPendingAttachments((prev) => [...prev, { name: file.name, base64, mimeType: file.type, size: file.size }]);
       };
       reader.readAsDataURL(file);
     });
@@ -417,7 +434,10 @@ export default function Messages() {
         </Dialog>
 
         {/* Reply dialog */}
-        <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
+        <Dialog open={replyOpen} onOpenChange={(open) => {
+          setReplyOpen(open);
+          if (!open) setReplyPendingAttachments([]);
+        }}>
           <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl h-[92dvh] max-h-[92dvh] overflow-hidden flex flex-col">
             <DialogHeader><DialogTitle className="font-serif">Reply</DialogTitle></DialogHeader>
             {!selectedMsg ? (
@@ -433,6 +453,12 @@ export default function Messages() {
                   subject: `Re: ${selectedMsg.subject}`,
                   body: replyBody,
                   parentId: selectedMsg.id,
+                  attachments: replyPendingAttachments.map((attachment) => ({
+                    base64: attachment.base64,
+                    fileName: attachment.name,
+                    mimeType: attachment.mimeType,
+                    fileSize: attachment.size,
+                  })),
                 });
               }}
               className="mt-2 flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto"
@@ -461,9 +487,25 @@ export default function Messages() {
                 placeholder="Write your reply..."
                 required
               />
-              <Button type="submit" className="w-full gap-1.5" disabled={replyMutation.isPending || activeReplyRecipientIds.length === 0}>
-                <Send className="w-3.5 h-3.5" />{replyMutation.isPending ? "Sending..." : "Send Reply"}
-              </Button>
+              {replyPendingAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {replyPendingAttachments.map((attachment, index) => (
+                    <Badge key={`${attachment.name}-${index}`} variant="secondary" className="text-xs gap-1">
+                      <Paperclip className="w-3 h-3" />{attachment.name}
+                      <button type="button" aria-label={`Remove ${attachment.name}`} onClick={() => setReplyPendingAttachments((previous) => previous.filter((_, itemIndex) => itemIndex !== index))} className="ml-1 hover:text-destructive">×</button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button type="button" variant="outline" size="sm" className="gap-1.5 bg-white/60" onClick={() => replyAttachRef.current?.click()} disabled={replyMutation.isPending}>
+                  <Paperclip className="w-3.5 h-3.5" />Attach files
+                </Button>
+                <input ref={replyAttachRef} type="file" multiple className="hidden" onChange={handleReplyAttach} disabled={replyMutation.isPending} />
+                <Button type="submit" className="flex-1 gap-1.5" disabled={replyMutation.isPending || activeReplyRecipientIds.length === 0}>
+                  <Send className="w-3.5 h-3.5" />{replyMutation.isPending ? "Sending..." : "Send Reply"}
+                </Button>
+              </div>
             </form>
               <div className="border-t border-border/40 pt-3 mt-1 space-y-1.5">
                 <p className="text-xs text-muted-foreground font-medium">

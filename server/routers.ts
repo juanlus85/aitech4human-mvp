@@ -27,8 +27,9 @@ import {
   getNotificationsForUser, markNotificationRead,
   markAllNotificationsRead, getUnreadNotificationCount,
   getAllAnnouncements, getAnnouncementById, createAnnouncement, updateAnnouncement, deleteAnnouncement,
-  getAnnouncementReplies, createAnnouncementReply, deleteAnnouncementReply,
-  getAnnouncementAttachments, getAnnouncementAttachmentById, createAnnouncementAttachment, deleteAnnouncementAttachment,
+  getAnnouncementReplies, getAnnouncementReplyById, createAnnouncementReply, deleteAnnouncementReply,
+  getAnnouncementAttachments, getAnnouncementReplyAttachments, getAllAttachmentsForAnnouncement,
+  getAnnouncementAttachmentById, createAnnouncementAttachment, deleteAnnouncementAttachment,
   getAnnouncementReactions, getAnnouncementReaction, createAnnouncementReaction, deleteAnnouncementReaction,
   getAllLinks, createLink, deleteLink, updateLink,
   getCommProposalAttendance, upsertCommProposalAttendance, removeCommProposalAttendance,
@@ -72,7 +73,7 @@ function getSafeAttachmentFileName(fileName: string) {
   return safeName || "attachment";
 }
 
-async function storeAnnouncementAttachments(announcementId: number, attachments: AnnouncementAttachmentInput[]) {
+async function storeAnnouncementAttachments(announcementId: number, attachments: AnnouncementAttachmentInput[], replyId?: number) {
   const stored: Array<{ id: number; fileKey: string }> = [];
   try {
     for (let index = 0; index < attachments.length; index += 1) {
@@ -81,17 +82,28 @@ async function storeAnnouncementAttachments(announcementId: number, attachments:
       if (!buffer.length || buffer.length > MAX_ANNOUNCEMENT_ATTACHMENT_BYTES) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Each attachment must be no larger than 20 MB." });
       }
-      const key = `announcements/${announcementId}/${Date.now()}-${index}-${getSafeAttachmentFileName(attachment.fileName)}`;
+      const targetPath = replyId ? `replies/${replyId}` : "announcement";
+      const key = `announcements/${announcementId}/${targetPath}/${Date.now()}-${index}-${getSafeAttachmentFileName(attachment.fileName)}`;
       const { key: storedKey, url } = await storagePut(key, buffer, attachment.mimeType);
-      const storedAttachment = await createAnnouncementAttachment({
-        announcementId,
-        fileName: attachment.fileName,
-        fileKey: storedKey,
-        fileUrl: url,
-        fileSize: buffer.length,
-        mimeType: attachment.mimeType,
-      });
-      if (!storedAttachment) throw new Error("Could not save the attachment record.");
+      let storedAttachment;
+      try {
+        storedAttachment = await createAnnouncementAttachment({
+          announcementId,
+          replyId,
+          fileName: attachment.fileName,
+          fileKey: storedKey,
+          fileUrl: url,
+          fileSize: buffer.length,
+          mimeType: attachment.mimeType,
+        });
+      } catch (error) {
+        await storageDelete(storedKey);
+        throw error;
+      }
+      if (!storedAttachment) {
+        await storageDelete(storedKey);
+        throw new Error("Could not save the attachment record.");
+      }
       stored.push({ id: storedAttachment.id, fileKey: storedKey });
     }
   } catch (error) {
@@ -1379,7 +1391,7 @@ const announcementsRouter = router({
       const ann = await getAnnouncementById(input.id);
       if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
       if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      const attachments = await getAnnouncementAttachments(input.id);
+      const attachments = await getAllAttachmentsForAnnouncement(input.id);
       await deleteAnnouncement(input.id);
       await Promise.allSettled(attachments.map((attachment) => storageDelete(attachment.fileKey)));
       return { success: true };
@@ -1392,7 +1404,13 @@ const announcementsRouter = router({
       if (!attachment?.announcementId) throw new TRPCError({ code: "NOT_FOUND" });
       const ann = await getAnnouncementById(attachment.announcementId);
       if (!ann) throw new TRPCError({ code: "NOT_FOUND" });
-      if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      if (attachment.replyId) {
+        const reply = await getAnnouncementReplyById(attachment.replyId);
+        if (!reply) throw new TRPCError({ code: "NOT_FOUND" });
+        if (reply.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      } else if (ann.authorId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
       await deleteAnnouncementAttachment(input.id);
       await storageDelete(attachment.fileKey);
       return { success: true };
@@ -1435,20 +1453,34 @@ const announcementsRouter = router({
     .input(z.object({
       announcementId: z.number(),
       body: z.string().min(1),
+      attachments: z.array(announcementAttachmentSchema).max(10).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      return createAnnouncementReply({
+      const reply = await createAnnouncementReply({
         announcementId: input.announcementId,
         authorId: ctx.user.id,
         body: input.body,
       });
+      if (!reply) return reply;
+      try {
+        await storeAnnouncementAttachments(input.announcementId, input.attachments ?? [], reply.id);
+      } catch (error) {
+        await deleteAnnouncementReply(reply.id);
+        throw error;
+      }
+      return reply;
     }),
 
   deleteReply: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
+      const reply = await getAnnouncementReplyById(input.id);
+      if (!reply) throw new TRPCError({ code: "NOT_FOUND" });
+      if (reply.authorId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const attachments = await getAnnouncementReplyAttachments(input.id);
       await deleteAnnouncementReply(input.id);
-            return { success: true };
+      await Promise.allSettled(attachments.map((attachment) => storageDelete(attachment.fileKey)));
+      return { success: true };
     }),
 });
 
