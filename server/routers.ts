@@ -2,9 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { systemRouter } from "./_core/systemRouter";
-import { loginUser, registerUser, getUserFromToken, hashPassword, verifyPassword } from "./auth";
+import { createPasswordResetToken, getUserFromToken, hashPassword, hashPasswordResetToken, loginUser, normalizeEmail, registerUser, verifyPassword } from "./auth";
 import {
-  getAllUsers, getActiveMessageRecipients, getUserById, updateUser, deleteUser, updateUserPassword,
+  getAllUsers, getActiveMessageRecipients, getUserByEmail, getUserById, updateUser, deleteUser, updateUserPassword,
+  getValidPasswordResetToken, invalidatePasswordResetTokens, replacePasswordResetToken, usePasswordResetToken,
   getProfileByUserId, upsertProfile, getAllPublicProfilesMapped, getAllInternalMemberProfiles,
   getPublishedNews, getAllNews, getNewsBySlug, getNewsById, createNews, updateNews, deleteNews,
   getInboxForUser, getSentByUser, getMessageById, createMessage, createMessageRecipients, getMessageRecipients, markMessageRead, isMessageDeletedForUser, deleteMessageForUser,
@@ -41,7 +42,7 @@ import {
 } from "./db";
 import { storageDelete, storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
-import { getPlatformUrl, notifyMembers, sendEmail } from "./email";
+import { getPlatformUrl, notifyMembers, sendEmail, sendPasswordResetEmail } from "./email";
 import { getAllUserEmails } from "./db";
 import { createAndEmailNotification } from "./notificationEmail";
 
@@ -123,7 +124,7 @@ const authRouter = router({
   }),
 
   login: publicProcedure
-    .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
+    .input(z.object({ email: z.string().trim().email(), password: z.string().min(1), rememberMe: z.boolean().optional() }))
     .mutation(async ({ input, ctx }) => {
       try {
         const { user, token } = await loginUser(input);
@@ -132,13 +133,39 @@ const authRouter = router({
           httpOnly: true,
           secure: isHttps,
           sameSite: "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
+          ...(input.rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
           path: "/",
         });
         return { success: true, user };
       } catch (e: any) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: e.message });
       }
+    }),
+
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().trim().email() }))
+    .mutation(async ({ input }) => {
+      const user = await getUserByEmail(normalizeEmail(input.email));
+      if (user?.isActive) {
+        const { token, tokenHash } = createPasswordResetToken();
+        await replacePasswordResetToken(user.id, tokenHash, new Date(Date.now() + 60 * 60 * 1000));
+        const sent = await sendPasswordResetEmail({ to: user.email, name: user.name, token });
+        if (!sent) console.warn(`[auth] Password reset email could not be sent for user ${user.id}.`);
+      }
+      // Keep the response identical whether the account exists or not.
+      return { success: true };
+    }),
+
+  resetPassword: publicProcedure
+    .input(z.object({ token: z.string().min(32), newPassword: z.string().min(8) }))
+    .mutation(async ({ input }) => {
+      const resetToken = await getValidPasswordResetToken(hashPasswordResetToken(input.token));
+      if (!resetToken) throw new TRPCError({ code: "BAD_REQUEST", message: "This password link is invalid or has expired." });
+      const user = await getUserById(resetToken.userId);
+      if (!user?.isActive) throw new TRPCError({ code: "BAD_REQUEST", message: "This account is unavailable." });
+      await updateUserPassword(user.id, await hashPassword(input.newPassword));
+      await usePasswordResetToken(resetToken.id);
+      return { success: true };
     }),
 
   logout: publicProcedure.mutation(({ ctx }) => {
@@ -148,7 +175,7 @@ const authRouter = router({
 
   register: adminProcedure
     .input(z.object({
-      email: z.string().email(),
+      email: z.string().trim().email(),
       password: z.string().min(8),
       name: z.string().min(1),
       role: z.enum(["admin", "member"]).default("member"),
@@ -176,94 +203,40 @@ const usersRouter = router({
     .input(z.object({
       id: z.number(),
       name: z.string().optional(),
-      email: z.string().email().optional(),
+      email: z.string().trim().email().optional(),
       role: z.enum(["admin", "member"]).optional(),
       isActive: z.boolean().optional(),
     }))
     .mutation(({ input }) => {
       const { id, ...data } = input;
-      return updateUser(id, data);
+      return updateUser(id, { ...data, ...(data.email ? { email: normalizeEmail(data.email) } : {}) });
+    }),
+
+  setPassword: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      newPassword: z.string().min(8),
+    }))
+    .mutation(async ({ input }) => {
+      const user = await getUserById(input.id);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      await updateUserPassword(input.id, await hashPassword(input.newPassword));
+      await invalidatePasswordResetTokens(input.id);
+      return { success: true };
     }),
 
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(({ input }) => deleteUser(input.id)),
   sendWelcomeEmail: adminProcedure
-    .input(z.object({
-      userId: z.number(),
-      password: z.string().min(1),
-    }))
+    .input(z.object({ userId: z.number() }))
     .mutation(async ({ input }) => {
       const user = await getUserById(input.userId);
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-      const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);padding:32px 40px;border-radius:12px 12px 0 0;">
-            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">AI&amp;Tech4Human</h1>
-            <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Research &amp; Innovation Group</p>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="background:#ffffff;padding:40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
-            <p style="margin:0 0 16px;color:#374151;font-size:15px;">Dear <strong>${user.name}</strong>,</p>
-            <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-              Welcome to the <strong>AI&amp;Tech4Human Research &amp; Innovation Group</strong> collaboration platform. Your account has been created and you can now access the member area.
-            </p>
-            <!-- Credentials box -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:24px 0;">
-              <tr><td style="padding:20px 24px;">
-                <p style="margin:0 0 12px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Your access credentials</p>
-                <table cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding:4px 0;color:#6b7280;font-size:14px;width:100px;">Website:</td>
-                    <td style="padding:4px 0;"><a href="https://research.blancoguzman.es" style="color:#6366f1;font-size:14px;text-decoration:none;">research.blancoguzman.es</a></td>
-                  </tr>
-                  <tr>
-                    <td style="padding:4px 0;color:#6b7280;font-size:14px;">Username:</td>
-                    <td style="padding:4px 0;color:#111827;font-size:14px;font-weight:600;">${user.email}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:4px 0;color:#6b7280;font-size:14px;">Password:</td>
-                    <td style="padding:4px 0;color:#111827;font-size:14px;font-weight:600;">${input.password}</td>
-                  </tr>
-                </table>
-              </td></tr>
-            </table>
-            <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-              You can change your password at any time from your <a href="https://research.blancoguzman.es/dashboard/profile" style="color:#6366f1;">profile settings</a> once logged in.
-            </p>
-            <p style="margin:24px 0 0;color:#374151;font-size:15px;">Best regards,<br /><strong>AI&amp;Tech4Human Research &amp; Innovation Group</strong></p>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f9fafb;padding:20px 40px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
-            <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-              This email was sent to ${user.email} because an account was created for you on the AI&amp;Tech4Human platform.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-      const sent = await sendEmail({
-        to: user.email,
-        subject: "Welcome to AI&Tech4Human Research & Innovation Group",
-        html,
-        text: `Dear ${user.name},\n\nWelcome to the AI&Tech4Human Research & Innovation Group collaboration platform. Your account has been created and you can now access the member area.\n\nWebsite: https://research.blancoguzman.es\nUsername: ${user.email}\nPassword: ${input.password}\n\nYou can change your password at any time from your profile settings (https://research.blancoguzman.es/dashboard/profile) once logged in.\n\nBest regards,\nAI&Tech4Human Research & Innovation Group`,
-      });
-            if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SMTP not configured or email failed. Please check Settings > SMTP." });
+      const { token, tokenHash } = createPasswordResetToken();
+      await replacePasswordResetToken(user.id, tokenHash, new Date(Date.now() + 60 * 60 * 1000));
+      const sent = await sendPasswordResetEmail({ to: user.email, name: user.name, token });
+      if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SMTP not configured or email failed. Please check Settings > SMTP." });
       return { success: true };
     }),
   changePassword: protectedProcedure
@@ -278,6 +251,7 @@ const usersRouter = router({
       if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect" });
       const newHash = await hashPassword(input.newPassword);
       await updateUserPassword(user.id, newHash);
+      await invalidatePasswordResetTokens(user.id);
       return { success: true };
     }),
 });

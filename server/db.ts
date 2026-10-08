@@ -1,8 +1,8 @@
-import { aliasedTable, and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
-  users, profiles, news, messages, messageRecipients, messageDeletions, messageAttachments,
+  users, passwordResetTokens, profiles, news, messages, messageRecipients, messageDeletions, messageAttachments,
   meetings, meetingAttendance, meetingDateOptions, meetingDateVotes,
   congresses, commProposals, commProposalInterests, commProposalAttendance,
   papers, paperContributors,
@@ -75,6 +75,15 @@ export async function getUserById(id: number) {
   return r[0] ?? null;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(users)
+    .where(sql`LOWER(${users.email}) = LOWER(${email})`)
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function updateUser(id: number, data: Partial<{ name: string; email: string; role: "admin" | "member"; isActive: boolean }>) {
   const db = await getDb();
   if (!db) return;
@@ -86,6 +95,43 @@ export async function updateUserPassword(id: number, passwordHash: string) {
   if (!db) return;
   await db.update(users).set({ passwordHash }).where(eq(users.id, id));
 }
+
+export async function replacePasswordResetToken(userId: number, tokenHash: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) return;
+  await invalidatePasswordResetTokens(userId);
+  await db.insert(passwordResetTokens).values({ userId, tokenHash, expiresAt });
+}
+
+export async function invalidatePasswordResetTokens(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+}
+
+export async function getValidPasswordResetToken(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(passwordResetTokens).where(and(
+    eq(passwordResetTokens.tokenHash, tokenHash),
+    isNull(passwordResetTokens.usedAt),
+    gt(passwordResetTokens.expiresAt, new Date()),
+  )).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function usePasswordResetToken(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, id));
+}
+
+export async function deletePasswordResetTokenByHash(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash));
+}
+
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) return;

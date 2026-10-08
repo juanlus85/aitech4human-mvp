@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
+import { createHash, randomBytes } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { eq } from "drizzle-orm";
-import { getDb } from "./db";
+import { getDb, getUserByEmail } from "./db";
 import { users, profiles } from "../drizzle/schema";
 import type { User } from "../drizzle/schema";
 
@@ -9,6 +10,19 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "aitech4human-fallback-secret-change-in-prod"
 );
 const JWT_EXPIRY = "7d";
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function hashPasswordResetToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function createPasswordResetToken(): { token: string; tokenHash: string } {
+  const token = randomBytes(32).toString("hex");
+  return { token, tokenHash: hashPasswordResetToken(token) };
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -43,7 +57,7 @@ export async function getUserFromToken(token: string): Promise<User | null> {
   if (!db) return null;
 
   const result = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
-  return result[0] ?? null;
+  return result[0]?.isActive ? result[0] : null;
 }
 
 export async function registerUser(data: {
@@ -55,13 +69,15 @@ export async function registerUser(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const existing = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
-  if (existing.length > 0) throw new Error("Email already registered");
+  const email = normalizeEmail(data.email);
+
+  const existing = await getUserByEmail(email);
+  if (existing) throw new Error("Email already registered");
 
   const passwordHash = await hashPassword(data.password);
 
   await db.insert(users).values({
-    email: data.email,
+    email,
     passwordHash,
     name: data.name,
     role: data.role ?? "member",
@@ -69,8 +85,8 @@ export async function registerUser(data: {
     lastSignedIn: new Date(),
   });
 
-  const created = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
-  const user = created[0]!;
+  const user = await getUserByEmail(email);
+  if (!user) throw new Error("Could not create user");
 
   // Create empty profile
   await db.insert(profiles).values({ userId: user.id });
@@ -86,8 +102,7 @@ export async function loginUser(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
-  const user = result[0];
+  const user = await getUserByEmail(normalizeEmail(data.email));
 
   if (!user || !user.isActive) throw new Error("Invalid credentials");
 

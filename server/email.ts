@@ -156,6 +156,25 @@ export async function sendNotificationEmail(opts: {
   });
 }
 
+export async function sendPasswordResetEmail(opts: {
+  to: string;
+  name: string;
+  token: string;
+}): Promise<boolean> {
+  const link = getPlatformUrl(`/reset-password?token=${encodeURIComponent(opts.token)}`);
+  const content = `
+    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 12px;">Dear ${escapeHtml(opts.name)},</p>
+    <p style="color: #4b5563; line-height: 1.6; margin: 0;">A request was made to set a new password for your AI&amp;Tech4Human account. Use the button below to choose a new password. This secure link expires in one hour and can be used once.</p>
+    <p style="color: #6b7280; line-height: 1.6; margin: 16px 0 0; font-size: 13px;">If you did not request this, you can safely ignore this email. Your existing password will remain unchanged.</p>
+  `;
+  return sendEmail({
+    to: opts.to,
+    subject: "Set a new password for AI&Tech4Human",
+    html: emailLayout({ eyebrow: "Account access", title: "Choose a new password", content, actionLabel: "Set new password", link }),
+    text: `Dear ${opts.name},\n\nUse this secure one-time link to choose a new password. It expires in one hour:\n${link}\n\nIf you did not request this, ignore this email. Your existing password will remain unchanged.`,
+  });
+}
+
 /** Sends the same group notification individually, preserving recipient privacy. */
 export async function notifyMembers(opts: {
   subject: string;

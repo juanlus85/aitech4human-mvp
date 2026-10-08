@@ -20,6 +20,9 @@ vi.mock("@/lib/trpc", () => ({
           return { mutate: mocks.mutate, isPending: false };
         },
       },
+      requestPasswordReset: {
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+      },
     },
   },
 }));
@@ -48,7 +51,7 @@ describe("Login redirect from a message email", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-password" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
 
-    expect(mocks.mutate).toHaveBeenCalledWith({ email: "member@example.org", password: "test-password" });
+    expect(mocks.mutate).toHaveBeenCalledWith({ email: "member@example.org", password: "test-password", rememberMe: false });
     await mocks.options.onSuccess();
 
     expect(mocks.invalidate).toHaveBeenCalledOnce();

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -15,6 +16,9 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
 
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.login.useMutation({
@@ -30,8 +34,17 @@ export default function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loginMutation.mutate({ email, password });
+    loginMutation.mutate({ email, password, rememberMe });
   };
+
+  const requestResetMutation = trpc.auth.requestPasswordReset.useMutation({
+    onSuccess: () => {
+      toast.success("If an active account matches that email, a secure password link has been sent.");
+      setResetOpen(false);
+      setResetEmail("");
+    },
+    onError: () => toast.error("The request could not be completed. Please try again later."),
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -93,6 +106,16 @@ export default function Login() {
               </div>
             </div>
 
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer text-muted-foreground">
+                <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 rounded border-border accent-primary" />
+                Remember me for 30 days
+              </label>
+              <button type="button" className="text-primary hover:underline" onClick={() => { setResetEmail(email); setResetOpen(true); }}>
+                Forgot password?
+              </button>
+            </div>
+
             <Button
               type="submit"
               className="w-full font-medium mt-2"
@@ -110,6 +133,32 @@ export default function Login() {
             to request access.
           </p>
         </div>
+
+        <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-serif">Choose a new password</DialogTitle>
+            </DialogHeader>
+            <form
+              className="mt-2 space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                requestResetMutation.mutate({ email: resetEmail });
+              }}
+            >
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Enter your account email and we will send a secure one-time link. It is valid for one hour and lets you choose a new password.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="reset-email">Email address</Label>
+                <Input id="reset-email" type="email" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} autoComplete="email" required />
+              </div>
+              <Button type="submit" className="w-full" disabled={requestResetMutation.isPending}>
+                {requestResetMutation.isPending ? "Sending..." : "Send secure link"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <p className="text-center mt-6">
           <Link href="/">

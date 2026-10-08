@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2, Shield, User, Mail } from "lucide-react";
+import { Plus, Pencil, Trash2, Shield, User, Mail, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function AdminUsers() {
@@ -26,7 +26,8 @@ export default function AdminUsers() {
 
   // Welcome email state
   const [welcomeUser, setWelcomeUser] = useState<any>(null);
-  const [welcomePassword, setWelcomePassword] = useState("");
+  const [passwordUser, setPasswordUser] = useState<any>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: "", confirm: "" });
 
   const createMutation = trpc.auth.register.useMutation({
     onSuccess: () => {
@@ -56,11 +57,20 @@ export default function AdminUsers() {
 
   const welcomeEmailMutation = trpc.users.sendWelcomeEmail.useMutation({
     onSuccess: () => {
-      toast.success(`Welcome email sent to ${welcomeUser?.email}`);
+      toast.success(`Secure access email sent to ${welcomeUser?.email}`);
       setWelcomeUser(null);
-      setWelcomePassword("");
     },
     onError: (e) => toast.error(e.message),
+  });
+
+  const setPasswordMutation = trpc.users.setPassword.useMutation({
+    onSuccess: () => {
+      utils.users.list.invalidate();
+      setPasswordUser(null);
+      setPasswordForm({ password: "", confirm: "" });
+      toast.success("Password updated. No email was sent.");
+    },
+    onError: (error) => toast.error(error.message),
   });
 
   // Guard AFTER all hooks
@@ -168,15 +178,26 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      {/* Send Welcome Email */}
+                      {/* Send secure account access email */}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-primary hover:text-primary"
-                        title="Send welcome email"
-                        onClick={() => { setWelcomeUser(u); setWelcomePassword(""); }}
+                        title="Send secure account access email"
+                        aria-label={`Send secure account access email to ${u.name}`}
+                        onClick={() => setWelcomeUser(u)}
                       >
                         <Mail className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-primary hover:text-primary"
+                        title="Set password without sending email"
+                        aria-label={`Set password for ${u.name}`}
+                        onClick={() => { setPasswordUser(u); setPasswordForm({ password: "", confirm: "" }); }}
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
                       </Button>
                       {/* Edit */}
                       <Button
@@ -256,13 +277,13 @@ export default function AdminUsers() {
           </DialogContent>
         </Dialog>
 
-        {/* Send Welcome Email dialog */}
-        <Dialog open={!!welcomeUser} onOpenChange={(o) => { if (!o) { setWelcomeUser(null); setWelcomePassword(""); } }}>
+        {/* Send account access email dialog */}
+        <Dialog open={!!welcomeUser} onOpenChange={(open) => { if (!open) setWelcomeUser(null); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="font-serif flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" />
-                Send Welcome Email
+                Send Account Access Email
               </DialogTitle>
             </DialogHeader>
             {welcomeUser && (
@@ -273,37 +294,67 @@ export default function AdminUsers() {
                   <p className="text-muted-foreground">{welcomeUser.email}</p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  A welcome email will be sent to <strong>{welcomeUser.email}</strong> with their login credentials.
-                  Please enter the password you assigned to this user so it can be included in the email.
+                  A secure one-time link will be sent to <strong>{welcomeUser.email}</strong> so they can choose their own password.
+                  The link expires after one hour.
                 </p>
-                <div className="space-y-1.5">
-                  <Label>User's password <span className="text-muted-foreground text-xs">(to include in the email)</span></Label>
-                  <Input
-                    type="text"
-                    placeholder="Enter the password assigned to this user"
-                    value={welcomePassword}
-                    onChange={(e) => setWelcomePassword(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                  The email will include the website URL, username and this password in plain text.
-                  Make sure SMTP is configured in Settings before sending.
+                <div className="bg-muted/40 border border-border/70 rounded-lg p-3 text-xs text-muted-foreground">
+                  No password is sent or stored in plain text. The existing password remains unchanged until the member uses the link.
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <Button variant="outline" className="flex-1" onClick={() => { setWelcomeUser(null); setWelcomePassword(""); }}>
+                  <Button variant="outline" className="flex-1" onClick={() => setWelcomeUser(null)}>
                     Cancel
                   </Button>
                   <Button
                     className="flex-1 gap-2"
-                    disabled={!welcomePassword || welcomeEmailMutation.isPending}
-                    onClick={() => welcomeEmailMutation.mutate({ userId: welcomeUser.id, password: welcomePassword })}
+                    disabled={welcomeEmailMutation.isPending}
+                    onClick={() => welcomeEmailMutation.mutate({ userId: welcomeUser.id })}
                   >
                     <Mail className="w-4 h-4" />
                     {welcomeEmailMutation.isPending ? "Sending..." : "Send Email"}
                   </Button>
                 </div>
               </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Administrator-only direct password change */}
+        <Dialog open={!!passwordUser} onOpenChange={(open) => { if (!open) { setPasswordUser(null); setPasswordForm({ password: "", confirm: "" }); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-serif flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-primary" />
+                Set Member Password
+              </DialogTitle>
+            </DialogHeader>
+            {passwordUser && (
+              <form
+                className="space-y-4 mt-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (passwordForm.password !== passwordForm.confirm) {
+                    toast.error("Passwords do not match.");
+                    return;
+                  }
+                  setPasswordMutation.mutate({ id: passwordUser.id, newPassword: passwordForm.password });
+                }}
+              >
+                <p className="text-sm text-muted-foreground">
+                  Set a new password for <strong>{passwordUser.name}</strong>. This action does not send an email.
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="admin-new-password">New password <span className="text-muted-foreground text-xs">(min. 8 characters)</span></Label>
+                  <Input id="admin-new-password" type="password" minLength={8} value={passwordForm.password} onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })} autoComplete="new-password" required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="admin-confirm-password">Confirm new password</Label>
+                  <Input id="admin-confirm-password" type="password" minLength={8} value={passwordForm.confirm} onChange={(event) => setPasswordForm({ ...passwordForm, confirm: event.target.value })} autoComplete="new-password" required />
+                </div>
+                <Button type="submit" className="w-full gap-2" disabled={setPasswordMutation.isPending || passwordForm.password.length < 8 || passwordForm.password !== passwordForm.confirm}>
+                  <KeyRound className="w-4 h-4" />
+                  {setPasswordMutation.isPending ? "Saving..." : "Save Password"}
+                </Button>
+              </form>
             )}
           </DialogContent>
         </Dialog>

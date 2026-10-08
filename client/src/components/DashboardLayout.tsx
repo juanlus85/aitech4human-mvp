@@ -57,7 +57,7 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
-const BUILD_LABEL = "Versión v72. 04/10/2026 17:50";
+const BUILD_LABEL = "Versión v73. 08/10/2026 11:26";
 
 const mainNav = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },

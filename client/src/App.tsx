@@ -14,6 +14,7 @@ import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 
 // Private dashboard pages
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/news/:slug" component={NewsDetail} />
       <Route path="/contact" component={Contact} />
       <Route path="/login" component={Login} />
+      <Route path="/reset-password" component={ResetPassword} />
 
       {/* Private dashboard */}
       <Route path="/dashboard" component={Dashboard} />
